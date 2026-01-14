@@ -1,24 +1,9 @@
 """Simple configuration for SentimentDelta."""
 
 import os
+from dotenv import load_dotenv
 
-
-def load_env():
-    """Load environment variables from .env file."""
-    try:
-        with open('.env') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    if key not in os.environ:
-                        os.environ[key] = value
-    except:
-        pass
-
-
-load_env()
-
+load_dotenv()
 
 def get_config():
     """Get configuration from environment variables."""
@@ -34,3 +19,10 @@ def get_config():
         'log_level': os.getenv('LOG_LEVEL', 'INFO'),
         'log_file': os.getenv('LOG_FILE')
     }
+
+class ApiConfig:
+    MONGO_URI = os.getenv("MONGO_URI")
+    MONGO_DB = os.getenv("MONGO_DB")
+    LOG_LEVEL = "INFO"
+    LOG_FILE = "server.log"
+    EMBEDDING_MODEL = "all-MiniLM-L6-v2"
