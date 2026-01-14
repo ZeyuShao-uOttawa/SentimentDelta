@@ -1,7 +1,7 @@
 """Simple MongoDB operations."""
 
 from typing import List, Dict, Any
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 from sentence_transformers import SentenceTransformer
 
 
@@ -37,7 +37,7 @@ class MongoDBManager:
         
         if not data:
             return 0
-            
+
         # Insert in batches
         total_inserted = 0
         for i in range(0, len(data), batch_size):
@@ -47,6 +47,19 @@ class MongoDBManager:
         
         return total_inserted
     
+    def insert_single_doc(self, collection_name, doc):
+        """Insert a single document."""
+        collection = self.db[collection_name]
+
+        if not doc:
+            return False
+
+        try:
+            collection.insert_one(doc)
+            return True
+        except errors.DuplicateKeyError:
+            return False
+
     def setup_embeddings(self, model_name):
         """Setup sentence transformer model."""
         try:
