@@ -1,0 +1,24 @@
+# Core Data Science
+numpy
+pandas
+scikit-learn
+scipy
+yfinance
+ta
+
+# Deep Learning
+sentence-transformers
+transformers
+torch
+
+python-dotenv
+tqdm
+
+bson
+pymongo
+
+flask
+beautifulsoup4
+requests
+selenium
+webdriver-manager
