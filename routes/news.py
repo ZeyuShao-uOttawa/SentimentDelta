@@ -1,6 +1,7 @@
 from flask import request, jsonify, Blueprint, current_app
 from sentence_transformers import SentenceTransformer
 from pymongo import errors
+from utils.logger import get_logger
 from utils.sentiment import finbert_sentiment
 from datetime import datetime
 import re
@@ -8,6 +9,7 @@ import re
 news_bp = Blueprint("news", __name__)
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
+logger = get_logger(__name__)
 
 COLLECTION_NAME = "news"
 
@@ -66,6 +68,8 @@ def save_news():
                         "negative": sentiment["negative"]
                     }
         }
+
+        logger.info(doc)
         
         success = current_app.db_manager.insert_single_doc(COLLECTION_NAME, doc)
 
@@ -80,3 +84,6 @@ def save_news():
         "inserted": inserted,
         "skipped_duplicates": skipped
     })
+
+
+

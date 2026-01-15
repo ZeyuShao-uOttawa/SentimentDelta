@@ -1,16 +1,18 @@
-from flask import Flask, request, jsonify, Blueprint
-from flask_cors import CORS
-from config.config import ApiConfig
-from utils.logger import get_logger
-from db.database import MongoDBManager
-from routes import api
 import atexit
+from flask import Flask
+from flask_cors import CORS
+from db.database import MongoDBManager
+from logger import get_logger
+from jobs import setup_scheduler
+from routes import api
+from config.config import ApiConfig
+
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
-
-    logger = get_logger('SentimentDeltaAPI', ApiConfig.LOG_LEVEL, ApiConfig.LOG_FILE)
+    logger = get_logger(__name__)
+    logger.info("Starting SentimentDelta API server...")
 
     db_manager = MongoDBManager(ApiConfig.MONGO_URI, ApiConfig.MONGO_DB)
 
@@ -26,11 +28,17 @@ def create_app():
     def shutdown_db():
         logger.info("Shutting down MongoDB connection")
         db_manager.disconnect()
-
+    
+    # Setup scheduler and jobs
+    setup_scheduler(app)
+    
+    # Standard blueprint registration
     app.register_blueprint(api)
-
+    
     return app
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, port=5000)
+    # Note: app.run() only starts the web server, NOT the cron jobs.
+    # The cron jobs are run by the system cron daemon independently.
+    app.run(debug=False, host='0.0.0.0', port=3000)

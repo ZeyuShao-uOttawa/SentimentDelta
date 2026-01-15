@@ -1,4 +1,102 @@
-# SentimentDelta - Simple Stock Market Analysis
+# # SentimentDelta
+
+A simple Flask application for stock sentiment analysis with future plans for news scraping and stock price monitoring.
+
+## Project Structure
+
+```
+├── app.py                 # Main Flask application
+├── api.py                 # API endpoints (health check)
+├── cron_runner.py         # Background job scheduler
+├── logger.py              # Logger module (import from anywhere)
+├── requirements.txt       # Python dependencies
+├── README.md
+├── db/
+│   └── database.py       # Database operations
+├── utils/                # Utilities and scrapers
+│   ├── logger.py         # Core logger implementation
+│   ├── daily_aggregate.py
+│   ├── sentiment.py
+│   ├── data_processor.py
+│   ├── scraper.py
+│   └── scrape_yahoo_finance.py
+└── logs/                 # Application logs
+```
+
+## Features
+
+- **Simple Flask API** with health check endpoint
+- **Background job scheduler** for future scraping tasks
+- **Centralized logging** - import logger from anywhere
+- **MongoDB integration** for data storage
+- **Clean, modular structure** following DRY and KISS principles
+
+## Quick Start
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Start the Flask app:
+
+```bash
+python app.py
+```
+
+3. Check health status:
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+4. Run background jobs (optional):
+
+```bash
+python cron_runner.py
+```
+
+## API Endpoints
+
+- `GET /api/health` - Health check endpoint
+
+## Usage
+
+### Logging
+
+```python
+from logger import get_logger
+
+# Use anywhere in your code
+logger = get_logger(__name__)
+logger.info("This is a log message")
+```
+
+### Database Operations
+
+All database operations are centralized in [db/database.py](db/database.py).
+
+### Background Jobs
+
+The cron runner currently prints "hello" every minute. You can extend it for scraping:
+
+```python
+# In cron_runner.py
+def scrape_news_job():
+    logger.info("Scraping news...")
+    # Your scraping logic here
+
+# Schedule it
+schedule.every(30).minutes.do(scrape_news_job)
+```
+
+## Future Plans
+
+- News scraping from various sources
+- Stock price monitoring
+- Sentiment analysis on news articles
+- REST APIs for data access - Simple Stock Market Analysis
 
 A simple, clean Python toolkit for stock data processing and news scraping. Built with simplicity in mind.
 
@@ -18,7 +116,7 @@ sentiment_delta/
 ├── config/config.py           # Simple configuration
 ├── utils/
 │   ├── logger.py              # Simple logging
-│   └──                        # 
+│   └──                        #
 ├── db/
 │   └── database.py            # MongoDB operations
 ├── data/

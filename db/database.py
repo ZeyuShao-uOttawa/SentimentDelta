@@ -3,12 +3,15 @@
 from typing import List, Dict, Any
 from pymongo import MongoClient, errors
 from sentence_transformers import SentenceTransformer
+from logger import get_logger
 
+logger = get_logger(__name__)
 
 class MongoDBManager:
     """Simple MongoDB manager."""
     
     def __init__(self, mongodb_uri, database_name):
+        logger.info("Initializing MongoDBManager")
         self.mongodb_uri = mongodb_uri
         self.database_name = database_name
         self.client = None
@@ -22,7 +25,8 @@ class MongoDBManager:
             self.client.admin.command('ping')
             self.db = self.client[self.database_name]
             return True
-        except Exception:
+        except Exception as e:
+            logger.error("Error connecting to MongoDB", e , exc_info=True)
             return False
     
     def disconnect(self):
