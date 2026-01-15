@@ -10,7 +10,7 @@ def get_config():
     return {
         'mongodb_uri': os.getenv('MONGODB_URI'),
         'database_name': os.getenv('DATABASE_NAME', 'stock_market_db'),
-        'tickers': [t.strip().upper() for t in os.getenv('TICKERS', 'AAPL,GOOGL,MSFT,TSLA,AMZN,NVDA,META,NFLX').split(',')],
+        'tickers': [t.strip().upper() for t in os.getenv('TICKERS', 'AAPL').split(',')],
         'batch_size': int(os.getenv('BATCH_SIZE', '1000')),
         'data_period': os.getenv('DATA_PERIOD', '1mo'),
         'data_interval': os.getenv('DATA_INTERVAL', '1d'),
@@ -26,3 +26,4 @@ class ApiConfig:
     LOG_LEVEL = "INFO"
     LOG_FILE = "server.log"
     EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+    TICKERS = [t.strip().upper() for t in os.getenv('TICKERS', 'AAPL').split(',')]
