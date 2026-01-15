@@ -3,10 +3,12 @@ from flask import Flask
 from flask_cors import CORS
 from db.database import MongoDBManager
 from logger import get_logger
-from jobs import setup_scheduler
+from jobs.jobs import setup_scheduler
 from routes import api
 from config.config import ApiConfig
-
+from db.stock_price import (
+    initialize_stock_manager,
+)
 
 def create_app():
     app = Flask(__name__)
@@ -22,10 +24,13 @@ def create_app():
     if not db_manager.setup_embeddings(ApiConfig.EMBEDDING_MODEL):
         logger.error("Failed to setup embeddings model")
 
+    # Initialize StockPriceManager singleton, which uses db_manager internally
+    initialize_stock_manager(db_manager)
+
     app.db_manager = db_manager
 
     @atexit.register
-    def shutdown_db():
+    def shutdcown_db():
         logger.info("Shutting down MongoDB connection")
         db_manager.disconnect()
     
