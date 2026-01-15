@@ -30,7 +30,7 @@ def create_app():
     app.db_manager = db_manager
 
     @atexit.register
-    def shutdown_db():
+    def shutdcown_db():
         logger.info("Shutting down MongoDB connection")
         db_manager.disconnect()
     

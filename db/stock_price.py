@@ -1,28 +1,11 @@
 """Stock price CRUD operations with singleton pattern."""
 
 from typing import List, Dict, Any, Optional
-from pymongo import errors
+from pymongo import errors, UpdateOne
 from logger import get_logger
 from datetime import datetime, timezone
 import pandas as pd
 from db.database import MongoDBManager
-
-'''
-from db.stock_prices import (
-    initialize_stock_manager,
-    create_stock_data,
-    get_stock_data_by_range,
-    get_latest_stock_data
-)
-
-# Initialize once at app startup
-initialize_stock_manager(db_manager)
-
-# Use anywhere in your project without creating objects
-create_stock_data(stock_data)
-latest = get_latest_stock_data("AAPL")
-range_data = get_stock_data_by_range("AAPL", "2026-01-01", "2026-01-31")
-'''
 
 class StockPriceManager:
     """Singleton manager for stock price CRUD operations."""
@@ -51,7 +34,7 @@ class StockPriceManager:
     @property
     def collection(self):
         """Get the MongoDB collection."""
-        if not self.db_manager or not self.db_manager.db:
+        if self.db_manager is None or self.db_manager.db is None:
             raise Exception("Database not connected. Call initialize() and ensure DB is connected.")
         return self.db_manager.db[self.collection_name]
     
@@ -62,39 +45,61 @@ class StockPriceManager:
             if 'Datetime' in stock_data and isinstance(stock_data['Datetime'], str):
                 stock_data['Datetime'] = pd.to_datetime(stock_data['Datetime'])
             
+            # Use id as _id if present
+            if 'id' in stock_data:
+                stock_data['_id'] = stock_data.pop('id')
+            
             result = self.collection.insert_one(stock_data)
             self.logger.info(f"Inserted stock data with ID: {result.inserted_id}")
             return True
         except errors.DuplicateKeyError:
-            self.logger.warning(f"Duplicate key error for stock data: {stock_data.get('id', 'Unknown')}")
+            self.logger.warning(f"Duplicate key error for stock data: {stock_data.get('_id', 'Unknown')}")
             return False
         except Exception as e:
             self.logger.error(f"Error inserting stock data: {e}")
             return False
     
     def create_many(self, stock_data_list: List[Dict[str, Any]], batch_size: int = 1000) -> int:
-        """Create multiple stock price records in batches."""
+        """Create multiple stock price records in batches with upsert to handle duplicates."""
         if not stock_data_list:
             return 0
         
-        total_inserted = 0
+        total_upserted = 0
         try:
             # Process datetime fields
             for data in stock_data_list:
                 if 'Datetime' in data and isinstance(data['Datetime'], str):
                     data['Datetime'] = pd.to_datetime(data['Datetime'])
             
-            # Insert in batches
+            # Insert in batches using upsert to prevent duplicates
             for i in range(0, len(stock_data_list), batch_size):
                 batch = stock_data_list[i:i + batch_size]
-                result = self.collection.insert_many(batch, ordered=False)
-                total_inserted += len(result.inserted_ids)
-                self.logger.info(f"Inserted batch {i//batch_size + 1}: {len(result.inserted_ids)} records")
+                
+                # Use bulk upsert operations to handle duplicates
+                bulk_ops = []
+                for doc in batch:
+                    if 'id' in doc:
+                        # Use the id as _id and remove the separate id field
+                        doc_id = doc.pop('id')  # Remove 'id' and use its value as _id
+                        bulk_ops.append(UpdateOne(
+                            filter={'_id': doc_id},
+                            update={'$set': doc},
+                            upsert=True
+                        ))
+                
+                if bulk_ops:
+                    result = self.collection.bulk_write(bulk_ops, ordered=False)
+                    # Count both upserted (new) and modified (updated) documents
+                    upserted_count = result.upserted_count + result.modified_count + result.inserted_count
+                    total_upserted += upserted_count
+                    self.logger.info(f"Batch {i//batch_size + 1}: {result.upserted_count} new, {result.modified_count} updated, {result.inserted_count} inserted")
+                else:
+                    self.logger.warning(f"Batch {i//batch_size + 1}: No valid documents with 'id' field found")
                 
         except Exception as e:
-            self.logger.error(f"Error inserting batch data: {e}")
+            self.logger.error(f"Error upserting batch data: {e}")
         
-        return total_inserted
+        return total_upserted
     
     def read_by_ticker_range(self, ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
         """Read stock data for a ticker within a date range. If no dates provided, returns all data for ticker."""
@@ -139,14 +144,14 @@ class StockPriceManager:
             return None
     
     def update(self, record_id: str, update_data: Dict[str, Any]) -> bool:
-        """Update a stock price record by ID."""
+        """Update a stock price record by _id."""
         try:
             # Process datetime if it's in update data
             if 'Datetime' in update_data and isinstance(update_data['Datetime'], str):
                 update_data['Datetime'] = pd.to_datetime(update_data['Datetime'])
                 
             result = self.collection.update_one(
-                {"id": record_id},
+                {"_id": record_id},
                 {"$set": update_data}
             )
             
@@ -162,9 +167,9 @@ class StockPriceManager:
             return False
     
     def delete(self, record_id: str) -> bool:
-        """Delete a stock price record by ID."""
+        """Delete a stock price record by _id."""
         try:
-            result = self.collection.delete_one({"id": record_id})
+            result = self.collection.delete_one({"_id": record_id})
             
             if result.deleted_count > 0:
                 self.logger.info(f"Deleted record with ID: {record_id}")
@@ -225,11 +230,11 @@ def get_latest_stock_data(ticker: str) -> Optional[Dict[str, Any]]:
     return _stock_manager.read_latest_by_ticker(ticker)
 
 def update_stock_data(record_id: str, update_data: Dict[str, Any]) -> bool:
-    """Update a stock price record by ID."""
+    """Update a stock price record by _id."""
     return _stock_manager.update(record_id, update_data)
 
 def delete_stock_data(record_id: str) -> bool:
-    """Delete a stock price record by ID."""
+    """Delete a stock price record by _id."""
     return _stock_manager.delete(record_id)
 
 def delete_ticker_data(ticker: str) -> int:
