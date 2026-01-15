@@ -9,7 +9,7 @@ def create_app():
     setup_scheduler(app)
     
     # Standard blueprint registration
-    from api import health_bp
+    from routes import health_bp
     app.register_blueprint(health_bp, url_prefix='/api')
     
     return app
