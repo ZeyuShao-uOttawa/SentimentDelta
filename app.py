@@ -1,16 +1,39 @@
+import atexit
 from flask import Flask
+from flask_cors import CORS
+from db.database import MongoDBManager
 from logger import get_logger
 from jobs import setup_scheduler
+from routes import api
+from config.config import ApiConfig
+
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
+    logger = get_logger(__name__)
+    logger.info("Starting SentimentDelta API server...")
+
+    db_manager = MongoDBManager(ApiConfig.MONGO_URI, ApiConfig.MONGO_DB)
+
+    if not db_manager.connect():
+        logger.error("Failed to connect to MongoDB")
+
+    if not db_manager.setup_embeddings(ApiConfig.EMBEDDING_MODEL):
+        logger.error("Failed to setup embeddings model")
+
+    app.db_manager = db_manager
+
+    @atexit.register
+    def shutdown_db():
+        logger.info("Shutting down MongoDB connection")
+        db_manager.disconnect()
     
     # Setup scheduler and jobs
     setup_scheduler(app)
     
     # Standard blueprint registration
-    from routes import health_bp
-    app.register_blueprint(health_bp, url_prefix='/api')
+    app.register_blueprint(api)
     
     return app
 
