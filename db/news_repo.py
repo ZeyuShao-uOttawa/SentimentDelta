@@ -3,9 +3,22 @@ from pymongo.collection import Collection
 from bson import ObjectId
 from datetime import datetime
 
-class NewsRepository:
-    def __init__(self, db):
-        self.collection: Collection = db["news"]
+class _NewsRepository:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not self._initialized:
+            self.collection: Optional[Collection] = None
+            self._initialized = True
+    
+    def initialize(self, db, collection_name: str = "news"):
+        self.collection = db[collection_name]
 
     def create_one(self, doc: Dict[str, Any]) -> ObjectId:
         result = self.collection.insert_one(doc)
@@ -98,3 +111,50 @@ class NewsRepository:
             {"ticker": ticker}
         )
         return result.deleted_count
+
+# Global singleton instance
+_news_manager = _NewsRepository()
+
+# Module-level functions that use the singleton
+def initialize_news_manager(db, collection_name: str = "news"):
+    """Initialize the global news manager."""
+    _news_manager.initialize(db, collection_name)
+
+def create_news(doc: Dict[str, Any]) -> ObjectId:
+    return _news_manager.create_one(doc)
+
+def create_many_news(docs: List[Dict[str, Any]]) -> List[ObjectId]:
+    return _news_manager.create_many(docs)
+
+def get_news_by_id(doc_id: str) -> Optional[Dict[str, Any]]:
+    return _news_manager.find_by_id(doc_id)
+
+def get_all_news(limit: int = 100) -> List[Dict[str, Any]]:
+    return _news_manager.find_all(limit)
+
+def get_news_by_ticker(ticker: str) -> List[Dict[str, Any]]:
+    return _news_manager.find_by_ticker(ticker)
+
+def get_news_by_ticker_and_date(ticker: str, date_str: str) -> List[Dict[str, Any]]:
+    return _news_manager.find_by_ticker_and_date(ticker, date_str)
+
+def get_news_date_range(ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    return _news_manager.find_date_range(ticker, start_date, end_date)
+
+def get_avg_sentiment(ticker: str, date_str: str) -> Optional[Dict[str, float]]:
+    return _news_manager.avg_sentiment_by_day(ticker, date_str)
+
+def update_news(doc_id: str, updates: Dict[str, Any]) -> bool:
+    return _news_manager.update_by_id(doc_id, updates)
+
+def update_news_sentiment(doc_id: str, sentiment: Dict[str, float]) -> bool:
+    return _news_manager.update_sentiment(doc_id, sentiment)
+
+def update_news_embedding(doc_id: str, embedding: List[float]) -> bool:
+    return _news_manager.update_embedding(doc_id, embedding)
+
+def delete_news(doc_id: str) -> bool:
+    return _news_manager.delete_by_id(doc_id)
+
+def delete_news_by_ticker(ticker: str) -> int:
+    return _news_manager.delete_by_ticker(ticker)
