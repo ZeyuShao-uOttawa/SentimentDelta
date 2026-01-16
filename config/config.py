@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class ApiConfig:
-    MONGO_URI = os.getenv("MONGO_URI")
+    MONGODB_URI = os.getenv("MONGODB_URI")
     MONGO_DB = os.getenv("MONGO_DB")
     MONGODB_URI = os.getenv('MONGODB_URI')
     DATABASE_NAME = os.getenv('DATABASE_NAME', 'stock_market_db')

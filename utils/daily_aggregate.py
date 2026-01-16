@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI_MEET", "mongodb://mongo:27017")
+MONGODB_URI = os.getenv("MONGODB_URI_MEET", "mongodb://mongo:27017")
 DB_NAME = "stock_market_db"
 COLLECTION_NAME = "news"
 
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGODB_URI)
 db = client[DB_NAME]
 collection = db[COLLECTION_NAME]
 

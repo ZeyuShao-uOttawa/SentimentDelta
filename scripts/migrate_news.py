@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI")
+MONGODB_URI = os.getenv("MONGODB_URI")
 SOURCE_DB_NAME = "meet_data"
 TARGET_DB_NAME = "stock_market_db"
 SOURCE_COLLECTION_1 = "finviz_news"
@@ -14,7 +14,7 @@ SOURCE_COLLECTION_2 = "yahoo_news"
 TARGET_COLLECTION = "news"
 BATCH_SIZE = 500
 
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGODB_URI)
 source_db = client[SOURCE_DB_NAME]
 target_db = client[TARGET_DB_NAME]
 source_col_1 = source_db[SOURCE_COLLECTION_1]
