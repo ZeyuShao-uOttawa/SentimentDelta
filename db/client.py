@@ -1,6 +1,5 @@
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import ConnectionFailure
-from sentence_transformers import SentenceTransformer
 from logger import get_logger
 
 class MongoDBClient:
@@ -33,20 +32,6 @@ class MongoDBClient:
         self.db.news.create_index([("ticker", ASCENDING), ("date", ASCENDING)])
         
         self.db.stock_prices.create_index([("Ticker", ASCENDING), ("Datetime", ASCENDING)], unique=True,)
-
-    def setup_embeddings(self, model_name):
-        """Setup sentence transformer model."""
-        try:
-            self.embedding_model = SentenceTransformer(model_name)
-            return True
-        except Exception:
-            return False
-    
-    def get_embeddings(self, texts):
-        """Get embeddings for texts."""
-        if not self.embedding_model:
-            return None
-        return self.embedding_model.encode(texts)
     
     def close(self) -> None:
         """Close MongoDB connection."""

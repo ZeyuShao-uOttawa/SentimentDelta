@@ -4,6 +4,7 @@ from pymongo import errors
 from db.news import create_news
 from utils.logger import get_logger
 from utils.sentiment import finbert_sentiment
+from utils.embeddings import get_embeddings
 from datetime import datetime
 import re
 
@@ -48,7 +49,7 @@ def save_news():
         if not all(k in article for k in ("title", "url", "date", "body")):
             continue
         
-        embedding = current_app.db_client.get_embeddings(ticker_name + " " + article["title"] + " " + article["body"] + " " + article["date"]).tolist()
+        embedding = get_embeddings(ticker_name + " " + article["title"] + " " + article["body"] + " " + article["date"]).tolist()
 
         sentiment = finbert_sentiment(article["title"] + " " + article["body"])
 

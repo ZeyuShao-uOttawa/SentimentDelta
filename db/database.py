@@ -2,7 +2,6 @@
 
 from typing import List, Dict, Any
 from pymongo import MongoClient, errors
-from sentence_transformers import SentenceTransformer
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +15,6 @@ class MongoDBManager:
         self.database_name = database_name
         self.client = None
         self.db = None
-        self.embedding_model = None
     
     def connect(self):
         """Connect to MongoDB."""
@@ -63,17 +61,3 @@ class MongoDBManager:
             return True
         except errors.DuplicateKeyError:
             return False
-
-    def setup_embeddings(self, model_name):
-        """Setup sentence transformer model."""
-        try:
-            self.embedding_model = SentenceTransformer(model_name)
-            return True
-        except Exception:
-            return False
-    
-    def get_embeddings(self, texts):
-        """Get embeddings for texts."""
-        if not self.embedding_model:
-            return None
-        return self.embedding_model.encode(texts)
