@@ -61,7 +61,7 @@ def process_ticker_data(ticker, period="1mo", interval="15m", start=None, end=No
         
         # Create ID field combining ticker and timestamp
         if 'Datetime' in data.columns:
-            data['_id'] = data.apply(lambda row: f"{ticker}_{pd.to_datetime(row['Datetime']).strftime('%Y%m%d_%H%M%S')}", axis=1)
+            data['id'] = data.apply(lambda row: f"{ticker}_{pd.to_datetime(row['Datetime']).strftime('%Y%m%d_%H%M%S')}", axis=1)
         
         # Convert to JSON-friendly format
         json_data = []
