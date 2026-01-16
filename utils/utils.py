@@ -4,7 +4,7 @@ import datetime
 from typing import Optional
 
 from tqdm import tqdm
-from config import get_config
+from config.config import ApiConfig
 from db.database import MongoDBManager
 
 
@@ -211,12 +211,11 @@ if __name__ == "__main__":
     print("Starting date field update process...")
     
     try:
-        config = get_config()
         print(f"Configuration loaded successfully")
-        print(f"MongoDB URI: {config['mongodb_uri']}")
-        print(f"Database name: {config['database_name']}")
+        print(f"MongoDB URI: {ApiConfig.MONGODB_URI}")
+        print(f"Database name: {ApiConfig.DATABASE_NAME}")
         
-        results = add_date_field_simple(config['mongodb_uri'], config['database_name'])
+        results = add_date_field_simple(ApiConfig.MONGODB_URI, ApiConfig.DATABASE_NAME)
         
         print("\n" + "="*50)
         print("Date field update results:")

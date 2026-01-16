@@ -61,7 +61,7 @@ def process_ticker_data(ticker, period="1mo", interval="15m", start=None, end=No
         
         # Create ID field combining ticker and timestamp
         if 'Datetime' in data.columns:
-            data['id'] = data.apply(lambda row: f"{ticker}_{pd.to_datetime(row['Datetime']).strftime('%Y%m%d_%H%M%S')}", axis=1)
+            data['_id'] = data.apply(lambda row: f"{ticker}_{pd.to_datetime(row['Datetime']).strftime('%Y%m%d_%H%M%S')}", axis=1)
         
         # Convert to JSON-friendly format
         json_data = []
@@ -80,44 +80,3 @@ def process_ticker_data(ticker, period="1mo", interval="15m", start=None, end=No
     except Exception as e:
         logger.error(f"Error processing {ticker}: {str(e)}")
         return None
-
-
-def process_multiple_tickers(tickers, period="1mo", interval="15m", start_date=None, end_date=None):
-    """Process multiple tickers.
-    
-    Args:
-        tickers: List of ticker symbols
-        period: Valid periods (used when start_date/end_date not provided)
-        interval: Valid intervals
-        # custom_logger: Optional custom logger (deprecated parameter)
-        start_date: Download start date string (YYYY-MM-DD), inclusive
-        end_date: Download end date string (YYYY-MM-DD), exclusive
-    """
-    logger.info(f"Starting bulk processing for {len(tickers)} tickers")
-    
-    results = {}
-    successful = 0
-    failed = 0
-    
-    for ticker in tqdm(tickers, desc="Processing tickers"):
-        try:
-            logger.debug(f"Starting download for {ticker}")
-            
-            data = process_ticker_data(ticker, period, interval, start_date, end_date)
-            results[ticker] = data
-            
-            if data is not None:
-                successful += 1
-                logger.info(f"Successfully processed {ticker}: {len(data)} records")
-            else:
-                failed += 1
-                logger.warning(f"Failed to get data for {ticker}")
-                
-        except Exception as e:
-            failed += 1
-            logger.error(f"Exception processing {ticker}: {str(e)}")
-            results[ticker] = None
-    
-    logger.info(f"Processing complete: successful={successful}, failed={failed}")
-    
-    return results

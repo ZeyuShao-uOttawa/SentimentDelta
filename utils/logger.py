@@ -6,8 +6,10 @@ from pathlib import Path
 from datetime import datetime
 import os
 
+from config.config import ApiConfig
 
-def get_logger(name=None, level="INFO", log_file=None):
+
+def get_logger(name=None, level=ApiConfig.LOG_LEVEL, log_file=None):
     """
     Get a simple logger that can be used anywhere in the project.
     

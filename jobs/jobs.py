@@ -13,10 +13,9 @@ from db.stock_price import (
     create_many_stock_data,
     get_latest_stock_data
 )
-from config.config import get_config
+from config.config import ApiConfig
 
 logger = get_logger(__name__)
-config = get_config()
 
 def setup_scheduler(app):
     """Initialize and configure the scheduler with the Flask app"""
@@ -26,23 +25,19 @@ def setup_scheduler(app):
     # Register all scheduled jobs
     register_jobs(scheduler)
     
-    # Run stock price fetching job immediately on startup
-    # logger.info("Running initial stock price fetch on startup")
-    # fetch_and_store_stock_prices()
-    
     scheduler.start()
     return scheduler
 
 def fetch_and_store_stock_prices():
     """Fetch and store stock prices for all configured tickers."""
     
-    if not config:
+    if not ApiConfig.MONGODB_URI:
         logger.error("Configuration not initialized")
         return
     
-    tickers = config['tickers']
-    fallback_days = config['stock_fallback_days']
-    interval = config['data_interval']
+    tickers = ApiConfig.TICKERS
+    fallback_days = ApiConfig.STOCK_FALLBACK_DAYS
+    interval = ApiConfig.DATA_INTERVAL
     
     logger.info(f"Starting stock price fetch for {len(tickers)} tickers: {tickers}")
     
@@ -116,7 +111,7 @@ def fetch_and_store_stock_prices():
 def register_jobs(scheduler):
     """Register all scheduled jobs"""
     
-    fetch_interval_hours = config.get('stock_fetch_interval_hours', 3)
+    fetch_interval_hours = ApiConfig.STOCK_FETCH_INTERVAL_HOURS
     
     # Stock price fetching job - runs every N hours (configurable)
     @scheduler.task('interval', id='stock_price_fetcher', hours=fetch_interval_hours)

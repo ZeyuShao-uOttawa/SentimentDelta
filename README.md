@@ -145,17 +145,17 @@ python main.py scrape
 ## 🔧 Simple Usage
 
 ```python
-from sentiment_delta import get_config, get_logger, create_mongodb_manager
+from sentiment_delta import get_logger, create_mongodb_manager
+from sentiment_delta.config.config import ApiConfig
 from sentiment_delta.data import process_ticker_data
 
 # Basic usage
-config = get_config()
 logger = get_logger(__name__)
 data = process_ticker_data('AAPL')
 logger.info(f"Got {len(data)} records for AAPL")
 
 # Database operations
-db = create_mongodb_manager(config.mongodb_uri, config.database_name)
+db = create_mongodb_manager(ApiConfig.MONGODB_URI, ApiConfig.DATABASE_NAME)
 db.create_document('my_collection', {'ticker': 'AAPL', 'price': 150})
 ```
 
@@ -245,9 +245,8 @@ pip install -e .
 ```python
 # Stock data processing
 from sentiment_delta.data import process_ticker_data
-from sentiment_delta.config import get_config
+from sentiment_delta.config.config import ApiConfig
 
-config = get_config()
 stock_data = process_ticker_data('AAPL')
 ```
 
@@ -276,17 +275,15 @@ python main.py scrape
 ### Configuration Management
 
 ```python
-from sentiment_delta.config import get_config, create_config
+from sentiment_delta.config.config import ApiConfig
 
-# Use global config
-config = get_config()
-tickers = config.tickers
+# Use ApiConfig class
+tickers = ApiConfig.TICKERS
+batch_size = ApiConfig.BATCH_SIZE
 
-# Create custom config
-custom_config = create_config({
-    "TICKERS": ["AAPL", "GOOGL"],
-    "BATCH_SIZE": 500
-})
+# Configuration values are available as class attributes
+print(f"MongoDB URI: {ApiConfig.MONGODB_URI}")
+print(f"Database: {ApiConfig.DATABASE_NAME}")
 ```
 
 ### Logging
@@ -395,12 +392,12 @@ data = process_ticker_data('TSLA')
 ```python
 # example_external_project.py
 import pandas as pd
-from sentiment_delta import get_config, get_logger, create_mongodb_manager
+from sentiment_delta import get_logger, create_mongodb_manager
+from sentiment_delta.config.config import ApiConfig
 from sentiment_delta.data import process_ticker_data
 
 def my_analysis_function():
     # Setup
-    config = get_config()
     logger = get_logger(__name__)
 
     # Get data
