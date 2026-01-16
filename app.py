@@ -43,11 +43,14 @@ def create_app():
     # --- Depreciated
     app.db_manager = db_manager
     # --- 
-    
+
+    app.db_client = db_client
+
     @atexit.register
     def shutdcown_db():
         logger.info("Shutting down MongoDB connection")
         db_manager.disconnect()
+        db_client.close()
     
     # Setup scheduler and jobs
     setup_scheduler(app)

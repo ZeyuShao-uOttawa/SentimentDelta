@@ -1,6 +1,7 @@
 from flask import request, jsonify, Blueprint, current_app
 from sentence_transformers import SentenceTransformer
 from pymongo import errors
+from db.news import create_news
 from utils.logger import get_logger
 from utils.sentiment import finbert_sentiment
 from datetime import datetime
@@ -47,7 +48,7 @@ def save_news():
         if not all(k in article for k in ("title", "url", "date", "body")):
             continue
         
-        embedding = current_app.db_manager.get_embeddings(ticker_name + " " + article["title"] + " " + article["body"] + " " + article["date"]).tolist()
+        embedding = current_app.db_client.get_embeddings(ticker_name + " " + article["title"] + " " + article["body"] + " " + article["date"]).tolist()
 
         sentiment = finbert_sentiment(article["title"] + " " + article["body"])
 
@@ -69,13 +70,10 @@ def save_news():
                     }
         }
 
-        logger.info(doc)
-        
-        success = current_app.db_manager.insert_single_doc(COLLECTION_NAME, doc)
-
-        if success:
+        try:
+            create_news(doc)
             inserted += 1
-        else:
+        except errors.DuplicateKeyError:
             skipped += 1
 
     return jsonify({
