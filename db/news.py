@@ -2,6 +2,8 @@ from typing import Optional, List, Dict, Any
 from pymongo.collection import Collection
 from bson import ObjectId
 from datetime import datetime
+from logger import get_logger
+from db.client import MongoDBClient
 
 class _NewsManager:
     _instance = None
@@ -14,11 +16,22 @@ class _NewsManager:
 
     def __init__(self):
         if not self._initialized:
-            self.collection: Optional[Collection] = None
+            self.db_client = None
+            self.collection_name = "news"
+            self.logger = get_logger(__name__)
             self._initialized = True
     
-    def initialize(self, db, collection_name: str = "news"):
-        self.collection = db[collection_name]
+    def initialize(self, db_client: MongoDBClient, collection_name: str = "news"):
+        self.db_client = db_client
+        self.collection_name = collection_name
+        self.logger.info(f"NewsManager initialized with collection: {collection_name}")
+
+    @property
+    def collection(self):
+        """Get the MongoDB collection."""
+        if self.db_client is None or self.db_client.db is None:
+            raise Exception("Database not connected. Call initialize() and ensure DB is connected.")
+        return self.db_client.db[self.collection_name]
 
     def create_one(self, doc: Dict[str, Any]) -> ObjectId:
         result = self.collection.insert_one(doc)

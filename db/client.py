@@ -24,22 +24,15 @@ class MongoDBClient:
             self._create_indexes()
             return True
         except Exception as e:
-            self.logger.error("Error connecting to MongoDB", e , exc_info=True)
+            self.logger.exception("Error connecting to MongoDB")
             return False
 
     def _create_indexes(self) -> None:
-        self.db.news.create_index("url", unique=True, name="uniq_news_url")
+        self.db.news.create_index("url", unique=True)
 
-        self.db.news.create_index(
-            [("ticker", ASCENDING), ("date", ASCENDING)],
-            name="news_ticker_date_idx"
-        )
+        self.db.news.create_index([("ticker", ASCENDING), ("date", ASCENDING)])
         
-        self.db.stock_prices.create_index(
-            [("Ticker", ASCENDING), ("Datetime", ASCENDING)],
-            unique=True,
-            name="stock_ticker_datetime_idx"
-        )
+        self.db.stock_prices.create_index([("Ticker", ASCENDING), ("Datetime", ASCENDING)], unique=True,)
 
     def setup_embeddings(self, model_name):
         """Setup sentence transformer model."""
