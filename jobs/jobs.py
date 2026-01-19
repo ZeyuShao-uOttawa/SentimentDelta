@@ -50,8 +50,6 @@ def fetch_and_store_stock_prices():
     
     logger.info(f"Starting stock price fetch for {len(tickers)} tickers: {tickers}")
     
-    all_data = []
-    
     for ticker in tickers:
         try:
             logger.info(f"Processing ticker: {ticker}")
@@ -96,25 +94,19 @@ def fetch_and_store_stock_prices():
                     end=None
                 )
             
+            # Save data immediately after processing each ticker
             if ticker_data and len(ticker_data) > 0:
-                all_data.extend(ticker_data)
-                logger.info(f"Fetched {len(ticker_data)} records for {ticker}")
+                try:
+                    upserted_count = create_many_stock_data(ticker_data)
+                    logger.info(f"Successfully saved {upserted_count} stock price records for {ticker}")
+                except Exception as e:
+                    logger.error(f"Error storing stock data for {ticker}: {str(e)}", exc_info=True)
             else:
                 logger.info(f"No new data available for {ticker}")
                 
         except Exception as e:
             logger.error(f"Error processing ticker {ticker}: {str(e)}", exc_info=True)
             continue
-    
-    # Store all data in database
-    if all_data:
-        try:
-            upserted_count = create_many_stock_data(all_data)
-            logger.info(f"Successfully upserted {upserted_count} stock price records")
-        except Exception as e:
-            logger.error(f"Error storing stock data: {str(e)}", exc_info=True)
-    else:
-        logger.info("No new stock data to store")
 
 def fetch_and_store_stock_news():
     """Fetch and store stock news articles."""
@@ -129,8 +121,6 @@ def fetch_and_store_stock_news():
     logger.info(f"Starting stock news fetch for {len(tickers)} tickers: {tickers}")
     
     scraper = YahooFinanceScraper()
-    
-    all_processed_news = []
     
     for ticker in tickers:
         try:
@@ -205,24 +195,21 @@ def fetch_and_store_stock_news():
                         logger.warning(f"Error processing article for {ticker}: {e}")
                         continue
                 
-                all_processed_news.extend(processed_items)
-                logger.info(f"Processed {len(processed_items)} news articles for {ticker}")
+                # Save processed news immediately after processing each ticker
+                if processed_items:
+                    try:
+                        upserted_count = create_many_news(processed_items)
+                        logger.info(f"Successfully saved {upserted_count} news articles for {ticker}")
+                    except Exception as e:
+                        logger.error(f"Error storing news for {ticker}: {str(e)}", exc_info=True)
+                else:
+                    logger.info(f"No valid news articles processed for {ticker}")
             else:
                 logger.info(f"No new news articles found for {ticker}")
                 
         except Exception as e:
             logger.error(f"Error fetching news for ticker {ticker}: {str(e)}", exc_info=True)
             continue
-    
-    # Store all processed news in database
-    if all_processed_news:
-        try:
-            upserted_count = create_many_news(all_processed_news)
-            logger.info(f"Successfully stored {upserted_count} stock news articles")
-        except Exception as e:
-            logger.error(f"Error storing stock news: {str(e)}", exc_info=True)
-    else:
-        logger.info("No new stock news to store")
 
 def register_jobs(scheduler):
     """Register all scheduled jobs"""
@@ -251,5 +238,8 @@ def register_jobs(scheduler):
     def initial_stock_fetch():
         logger.info("Running delayed initial stock price fetch after server startup")
         fetch_and_store_stock_prices()
+    
+    @scheduler.task('date', id='initial_stock_news_fetch', run_date=datetime.now() + timedelta(seconds=60))
+    def initial_stock_news_fetch():
         logger.info("Running delayed initial stock news fetch after server startup")
         fetch_and_store_stock_news()
