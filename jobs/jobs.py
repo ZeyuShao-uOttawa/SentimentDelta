@@ -5,6 +5,8 @@ import pandas as pd
 import sys
 import os
 
+from utils.scraper import get_article_text
+
 # Add parent directory to path to import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -15,10 +17,11 @@ from db.stock_price import (
 )
 from config.config import ApiConfig
 from jobs.yahoo_stock_news import YahooFinanceScraper
+from jobs.finviz_stock_news import scrape_finviz_ticker_news
 from db.news import (
-    get_all_news, 
     create_many_news, 
-    get_latest_news_by_ticker
+    get_latest_news_by_ticker,
+    get_news_by_url
 )
 from utils.sentiment import finbert_sentiment
 from utils.embeddings import get_embeddings
@@ -211,6 +214,101 @@ def fetch_and_store_stock_news():
             logger.error(f"Error fetching news for ticker {ticker}: {str(e)}", exc_info=True)
             continue
 
+def fetch_and_store_finviz_news():
+    """Fetch and store stock news articles from Finviz."""
+    
+    if not ApiConfig.MONGODB_URI:
+        logger.error("Configuration not initialized")
+        return
+    
+    tickers = ApiConfig.TICKERS
+    
+    logger.info(f"Starting Finviz news fetch for {len(tickers)} tickers: {tickers}")
+    
+    for ticker in tickers:
+        try:
+            logger.info(f"Processing ticker: {ticker}")
+            
+            # Get latest news from database for this ticker
+            latest_news = get_latest_news_by_ticker(ticker)
+            
+            if latest_news:
+                latest_date = latest_news.get('date')
+                logger.info(f"Latest Finviz news for {ticker} found on {latest_date}. Fetching newer articles")
+            else:
+                logger.info(f"No Finviz news found for {ticker}. Fetching available articles")
+            
+            logger.info(f"Fetching Finviz news for ticker: {ticker}")
+            news_items = scrape_finviz_ticker_news(ticker, custom_logger=logger)
+            
+            if news_items and len(news_items) > 0:
+                # Process each news item with sentiment and embeddings
+                processed_items = []
+                
+                for article in news_items:
+                    try:
+                        # Skip if essential fields are missing
+                        if not all(k in article for k in ("title", "url", "date")):
+                            continue
+                        
+                        # Skip if URL already exists in database
+                        if get_news_by_url(article["url"]):
+                            logger.debug(f"URL already exists in database: {article['url']}")
+                            continue
+
+                        # Get the body here
+                        body = rticle_text(article["url"]) or None
+                        
+                        # Generate sentiment analysis
+                        sentiment = finbert_sentiment(article["title"] + " " + (body or ""))
+                        
+                        # Generate embeddings
+                        embedding_text = f"{ticker} {article['title']} {body or ''}"
+                        embedding = get_embeddings(embedding_text)
+                        if embedding is not None:
+                            embedding = embedding.tolist()
+                        
+                        # Create document in the required format
+                        doc = {
+                            "ticker": ticker,
+                            "source": "finviz",
+                            "title": article["title"],
+                            "url": article["url"],
+                            "date": article["date"],
+                            "body": body,
+                            "embedding": embedding,
+                            "ingested_at": datetime.now(),
+                            "timestamp": article["timestamp"],
+                            "sentiment": {
+                                "score": sentiment["score"],
+                                "positive": sentiment["positive"],
+                                "neutral": sentiment["neutral"],
+                                "negative": sentiment["negative"]
+                            }
+                        }
+                        
+                        processed_items.append(doc)
+                        
+                    except Exception as e:
+                        logger.warning(f"Error processing Finviz article for {ticker}: {e}")
+                        continue
+                
+                # Save processed news immediately after processing each ticker
+                if processed_items:
+                    try:
+                        upserted_count = create_many_news(processed_items)
+                        logger.info(f"Successfully saved {upserted_count} Finviz news articles for {ticker}")
+                    except Exception as e:
+                        logger.error(f"Error storing Finviz news for {ticker}: {str(e)}", exc_info=True)
+                else:
+                    logger.info(f"No valid Finviz news articles processed for {ticker}")
+            else:
+                logger.info(f"No new Finviz news articles found for {ticker}")
+                
+        except Exception as e:
+            logger.error(f"Error fetching Finviz news for ticker {ticker}: {str(e)}", exc_info=True)
+            continue
+
 def register_jobs(scheduler):
     """Register all scheduled jobs"""
     
@@ -233,6 +331,12 @@ def register_jobs(scheduler):
         logger.info(f"Running scheduled stock news fetch job (every {fetch_interval_hours} hours)")
         fetch_and_store_stock_news()
     
+    # Finviz news fetching job - runs every N hours (configurable)
+    @scheduler.task('interval', id='finviz_news_fetcher', hours=fetch_interval_hours)
+    def finviz_news_job():
+        logger.info(f"Running scheduled Finviz news fetch job (every {fetch_interval_hours} hours)")
+        fetch_and_store_finviz_news()
+    
     # Schedule initial fetch to run after server startup delay
     @scheduler.task('date', id='initial_stock_fetch', run_date=datetime.now() + timedelta(seconds=30))
     def initial_stock_fetch():
@@ -243,3 +347,8 @@ def register_jobs(scheduler):
     def initial_stock_news_fetch():
         logger.info("Running delayed initial stock news fetch after server startup")
         fetch_and_store_stock_news()
+    
+    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=90))
+    def initial_finviz_news_fetch():
+        logger.info("Running delayed initial Finviz news fetch after server startup")
+        fetch_and_store_finviz_news()
