@@ -79,6 +79,25 @@ class _NewsManager:
             }).sort("date", 1)
         )
 
+    def find_latest_by_ticker(self, ticker: str) -> Optional[Dict[str, Any]]:
+        """Find the latest news article for a ticker based on date and ingested_at."""
+        try:
+            query = {"ticker": ticker}
+            # Sort by date descending, then by ingested_at descending
+            result = self.collection.find(query).sort([("date", -1), ("ingested_at", -1)]).limit(1)
+            
+            latest = list(result)
+            if latest:
+                self.logger.info(f"Found latest news for ticker {ticker}")
+                return latest[0]
+            else:
+                self.logger.info(f"No news found for ticker {ticker}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error reading latest news for ticker {ticker}: {e}")
+            return None
+
     def avg_sentiment_by_day(self, ticker: str, date_str: str) -> Dict[str, float] | None:
         pipeline = [
             {"$match": {"ticker": ticker, "date": date_str}},
@@ -153,6 +172,9 @@ def get_news_by_ticker_and_date(ticker: str, date_str: str) -> List[Dict[str, An
 
 def get_news_date_range(ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
     return _news_manager.find_date_range(ticker, start_date, end_date)
+
+def get_latest_news_by_ticker(ticker: str) -> Optional[Dict[str, Any]]:
+    return _news_manager.find_latest_by_ticker(ticker)
 
 def get_avg_sentiment(ticker: str, date_str: str) -> Optional[Dict[str, float]]:
     return _news_manager.avg_sentiment_by_day(ticker, date_str)
