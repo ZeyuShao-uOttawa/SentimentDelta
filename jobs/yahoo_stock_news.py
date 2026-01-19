@@ -22,6 +22,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 from newspaper import Article
 from logger import get_logger
+from utils.scraper import get_article_text
 
 logger = get_logger(__name__)
 
@@ -151,9 +152,10 @@ class YahooFinanceScraper:
                         return None
             
             # Extract body
-            # TODO: Uncomment to fetch full article text
+            # TODO: can move to jobs and getch the summary there and avoid slowing down the scraper
+            # If URL is present in database, skip fetching body
             if 'url' in data:
-                article_text = self._get_article_text(data['url'])
+                article_text = get_article_text(data['url'])
                 data['body'] = article_text
             
             return data
@@ -177,17 +179,6 @@ class YahooFinanceScraper:
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(5)
-    
-    @staticmethod
-    def _get_article_text(url):
-        """Extract article text."""
-        try:
-            article = Article(url)
-            article.download()
-            article.parse()
-            return article.text if article.text and len(article.text) > 50 else None
-        except:
-            return None
     
     def _scroll_to_target(self, target_days: int, max_scrolls: int) -> bool:
         """Scroll until target days content is found."""

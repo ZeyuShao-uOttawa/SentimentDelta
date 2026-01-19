@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 from pymongo.collection import Collection
+from pymongo.errors import BulkWriteError
 from bson import ObjectId
 from datetime import datetime
 from logger import get_logger
@@ -37,11 +38,14 @@ class _NewsManager:
         result = self.collection.insert_one(doc)
         return result.inserted_id
 
-    def create_many(self, docs: List[Dict[str, Any]]) -> List[ObjectId]:
+    def create_many(self, docs: List[Dict[str, Any]]) -> int:
         if not docs:
-            return []
-        result = self.collection.insert_many(docs, ordered=False)
-        return result.inserted_ids
+            return 0
+        try:
+            result = self.collection.insert_many(docs, ordered=False)
+            return len(result.inserted_ids)
+        except BulkWriteError as e:
+            return e.details['nInserted']
 
     def find_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
         return self.collection.find_one({"_id": ObjectId(doc_id)})
@@ -64,6 +68,10 @@ class _NewsManager:
                 "date": date_str
             })
         )
+
+    def find_by_url(self, url: str) -> Optional[Dict[str, Any]]:
+        """Find a news article by URL."""
+        return self.collection.find_one({"url": url})
 
     def find_date_range(self, ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
         """
@@ -155,7 +163,7 @@ def initialize_news_manager(db, collection_name: str = "news"):
 def create_news(doc: Dict[str, Any]) -> ObjectId:
     return _news_manager.create_one(doc)
 
-def create_many_news(docs: List[Dict[str, Any]]) -> List[ObjectId]:
+def create_many_news(docs: List[Dict[str, Any]]) -> int:
     return _news_manager.create_many(docs)
 
 def get_news_by_id(doc_id: str) -> Optional[Dict[str, Any]]:
@@ -175,6 +183,9 @@ def get_news_date_range(ticker: str, start_date: str, end_date: str) -> List[Dic
 
 def get_latest_news_by_ticker(ticker: str) -> Optional[Dict[str, Any]]:
     return _news_manager.find_latest_by_ticker(ticker)
+
+def get_news_by_url(url: str) -> Optional[Dict[str, Any]]:
+    return _news_manager.find_by_url(url)
 
 def get_avg_sentiment(ticker: str, date_str: str) -> Optional[Dict[str, float]]:
     return _news_manager.avg_sentiment_by_day(ticker, date_str)
