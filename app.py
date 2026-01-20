@@ -17,7 +17,7 @@ def create_app():
     logger = get_logger(__name__)
     logger.info("Starting SentimentDelta API server...")
 
-    db_client = MongoDBClient(ApiConfig.MONGO_URI, ApiConfig.MONGO_DB)
+    db_client = MongoDBClient(ApiConfig.MONGODB_URI, ApiConfig.MONGO_DB)
 
     if not db_client.connect():
         logger.error("Failed to connect to MongoDB")

@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 from pymongo.collection import Collection
+from pymongo.errors import BulkWriteError
 from bson import ObjectId
 from datetime import datetime
 from logger import get_logger
@@ -37,11 +38,14 @@ class _NewsManager:
         result = self.collection.insert_one(doc)
         return result.inserted_id
 
-    def create_many(self, docs: List[Dict[str, Any]]) -> List[ObjectId]:
+    def create_many(self, docs: List[Dict[str, Any]]) -> int:
         if not docs:
-            return []
-        result = self.collection.insert_many(docs, ordered=False)
-        return result.inserted_ids
+            return 0
+        try:
+            result = self.collection.insert_many(docs, ordered=False)
+            return len(result.inserted_ids)
+        except BulkWriteError as e:
+            return e.details['nInserted']
 
     def find_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
         return self.collection.find_one({"_id": ObjectId(doc_id)})
@@ -65,6 +69,10 @@ class _NewsManager:
             })
         )
 
+    def find_by_url(self, url: str) -> Optional[Dict[str, Any]]:
+        """Find a news article by URL."""
+        return self.collection.find_one({"url": url})
+
     def find_date_range(self, ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
         """
         Uses string comparison safely because format is YYYY-MM-DD
@@ -78,6 +86,25 @@ class _NewsManager:
                 }
             }).sort("date", 1)
         )
+
+    def find_latest_by_ticker(self, ticker: str) -> Optional[Dict[str, Any]]:
+        """Find the latest news article for a ticker based on date and ingested_at."""
+        try:
+            query = {"ticker": ticker}
+            # Sort by date descending, then by ingested_at descending
+            result = self.collection.find(query).sort([("date", -1), ("ingested_at", -1)]).limit(1)
+            
+            latest = list(result)
+            if latest:
+                self.logger.info(f"Found latest news for ticker {ticker}")
+                return latest[0]
+            else:
+                self.logger.info(f"No news found for ticker {ticker}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error reading latest news for ticker {ticker}: {e}")
+            return None
 
     def avg_sentiment_by_day(self, ticker: str, date_str: str) -> Dict[str, float] | None:
         pipeline = [
@@ -136,7 +163,7 @@ def initialize_news_manager(db, collection_name: str = "news"):
 def create_news(doc: Dict[str, Any]) -> ObjectId:
     return _news_manager.create_one(doc)
 
-def create_many_news(docs: List[Dict[str, Any]]) -> List[ObjectId]:
+def create_many_news(docs: List[Dict[str, Any]]) -> int:
     return _news_manager.create_many(docs)
 
 def get_news_by_id(doc_id: str) -> Optional[Dict[str, Any]]:
@@ -153,6 +180,12 @@ def get_news_by_ticker_and_date(ticker: str, date_str: str) -> List[Dict[str, An
 
 def get_news_date_range(ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
     return _news_manager.find_date_range(ticker, start_date, end_date)
+
+def get_latest_news_by_ticker(ticker: str) -> Optional[Dict[str, Any]]:
+    return _news_manager.find_latest_by_ticker(ticker)
+
+def get_news_by_url(url: str) -> Optional[Dict[str, Any]]:
+    return _news_manager.find_by_url(url)
 
 def get_avg_sentiment(ticker: str, date_str: str) -> Optional[Dict[str, float]]:
     return _news_manager.avg_sentiment_by_day(ticker, date_str)
