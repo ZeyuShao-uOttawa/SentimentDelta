@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 import pandas as pd
 from db.database import MongoDBManager
 
+logger = get_logger(__name__)
+
 class StockPriceManager:
     """Singleton manager for stock price CRUD operations."""
     
@@ -22,14 +24,13 @@ class StockPriceManager:
         if not self._initialized:
             self.db_manager = None
             self.collection_name = "stock_prices"
-            self.logger = get_logger(__name__)
             self._initialized = True
     
     def initialize(self, db_manager: MongoDBManager, collection_name: str = "stock_prices"):
         """Initialize the manager with database connection."""
         self.db_manager = db_manager
         self.collection_name = collection_name
-        self.logger.info(f"StockPriceManager initialized with collection: {collection_name}")
+        logger.info(f"StockPriceManager initialized with collection: {collection_name}")
     
     @property
     def collection(self):
@@ -50,13 +51,13 @@ class StockPriceManager:
                 stock_data['_id'] = stock_data.pop('id')
             
             result = self.collection.insert_one(stock_data)
-            self.logger.info(f"Inserted stock data with ID: {result.inserted_id}")
+            logger.info(f"Inserted stock data with ID: {result.inserted_id}")
             return True
         except errors.DuplicateKeyError:
-            self.logger.warning(f"Duplicate key error for stock data: {stock_data.get('_id', 'Unknown')}")
+            logger.warning(f"Duplicate key error for stock data: {stock_data.get('_id', 'Unknown')}")
             return False
         except Exception as e:
-            self.logger.error(f"Error inserting stock data: {e}")
+            logger.error(f"Error inserting stock data: {e}")
             return False
     
     def create_many(self, stock_data_list: List[Dict[str, Any]], batch_size: int = 1000) -> int:
@@ -92,12 +93,12 @@ class StockPriceManager:
                     # Count both upserted (new) and modified (updated) documents
                     upserted_count = result.upserted_count + result.modified_count + result.inserted_count
                     total_upserted += upserted_count
-                    self.logger.info(f"Batch {i//batch_size + 1}: {result.upserted_count} new, {result.modified_count} updated, {result.inserted_count} inserted")
+                    logger.info(f"Batch {i//batch_size + 1}: {result.upserted_count} new, {result.modified_count} updated, {result.inserted_count} inserted")
                 else:
-                    self.logger.warning(f"Batch {i//batch_size + 1}: No valid documents with 'id' field found")
+                    logger.warning(f"Batch {i//batch_size + 1}: No valid documents with 'id' field found")
                 
         except Exception as e:
-            self.logger.error(f"Error upserting batch data: {e}")
+            logger.error(f"Error upserting batch data: {e}")
         
         return total_upserted
     
@@ -118,11 +119,11 @@ class StockPriceManager:
             cursor = self.collection.find(query).sort("Datetime", 1)
             results = list(cursor)
             
-            self.logger.info(f"Found {len(results)} records for ticker {ticker}")
+            logger.info(f"Found {len(results)} records for ticker {ticker}")
             return results
             
         except Exception as e:
-            self.logger.error(f"Error reading data for ticker {ticker}: {e}")
+            logger.error(f"Error reading data for ticker {ticker}: {e}")
             return []
     
     def read_latest_by_ticker(self, ticker: str) -> Optional[Dict[str, Any]]:
@@ -133,14 +134,14 @@ class StockPriceManager:
             
             latest = list(result)
             if latest:
-                self.logger.info(f"Found latest record for ticker {ticker}")
+                logger.info(f"Found latest record for ticker {ticker}")
                 return latest[0]
             else:
-                self.logger.info(f"No records found for ticker {ticker}")
+                logger.info(f"No records found for ticker {ticker}")
                 return None
                 
         except Exception as e:
-            self.logger.error(f"Error reading latest data for ticker {ticker}: {e}")
+            logger.error(f"Error reading latest data for ticker {ticker}: {e}")
             return None
     
     def update(self, record_id: str, update_data: Dict[str, Any]) -> bool:
@@ -156,14 +157,14 @@ class StockPriceManager:
             )
             
             if result.modified_count > 0:
-                self.logger.info(f"Updated record with ID: {record_id}")
+                logger.info(f"Updated record with ID: {record_id}")
                 return True
             else:
-                self.logger.warning(f"No record found with ID: {record_id}")
+                logger.warning(f"No record found with ID: {record_id}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error updating record {record_id}: {e}")
+            logger.error(f"Error updating record {record_id}: {e}")
             return False
     
     def delete(self, record_id: str) -> bool:
@@ -172,36 +173,36 @@ class StockPriceManager:
             result = self.collection.delete_one({"_id": record_id})
             
             if result.deleted_count > 0:
-                self.logger.info(f"Deleted record with ID: {record_id}")
+                logger.info(f"Deleted record with ID: {record_id}")
                 return True
             else:
-                self.logger.warning(f"No record found with ID: {record_id}")
+                logger.warning(f"No record found with ID: {record_id}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error deleting record {record_id}: {e}")
+            logger.error(f"Error deleting record {record_id}: {e}")
             return False
     
     def delete_by_ticker(self, ticker: str) -> int:
         """Delete all records for a specific ticker."""
         try:
             result = self.collection.delete_many({"Ticker": ticker})
-            self.logger.info(f"Deleted {result.deleted_count} records for ticker {ticker}")
+            logger.info(f"Deleted {result.deleted_count} records for ticker {ticker}")
             return result.deleted_count
             
         except Exception as e:
-            self.logger.error(f"Error deleting records for ticker {ticker}: {e}")
+            logger.error(f"Error deleting records for ticker {ticker}: {e}")
             return 0
     
     def get_all_tickers(self) -> List[str]:
         """Get list of all unique tickers in the collection."""
         try:
             tickers = self.collection.distinct("Ticker")
-            self.logger.info(f"Found {len(tickers)} unique tickers")
+            logger.info(f"Found {len(tickers)} unique tickers")
             return tickers
             
         except Exception as e:
-            self.logger.error(f"Error getting tickers: {e}")
+            logger.error(f"Error getting tickers: {e}")
             return []
 
 

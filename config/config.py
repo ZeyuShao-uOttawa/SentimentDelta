@@ -14,7 +14,7 @@ class ApiConfig:
     BATCH_SIZE = int(os.getenv('BATCH_SIZE', '1000'))
     DATA_INTERVAL = os.getenv('DATA_INTERVAL', '15m')
     STOCK_FETCH_INTERVAL_HOURS = int(os.getenv('STOCK_FETCH_INTERVAL_HOURS', '3'))
-    STOCK_FALLBACK_DAYS = int(os.getenv('STOCK_FALLBACK_DAYS', '3'))
+    STOCK_FALLBACK_DAYS = int(os.getenv('STOCK_FALLBACK_DAYS', '10'))
     STOCK_NEWS_FETCH_DAYS = int(os.getenv('STOCK_NEWS_FETCH_DAYS', '3'))
     SCRAPING_MAX_PAGES = int(os.getenv('SCRAPING_MAX_PAGES', '10'))
     EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
