@@ -43,19 +43,3 @@ def calculate_aggregate(search_date, ticker):
         target_collection.insert_one(features)
     else:
         print("No documents found for", ticker, "on", search_date)
-
-if __name__ == "__main__":
-    TICKERS = ["AMZN", "GOOGL", "META", "MSFT", "NFLX", "NVDA", "TSLA"]
-    start_str = "2026-01-01"
-    end_str = "2026-01-19"
-
-    start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
-    end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
-
-    current_date = start_date
-    while current_date <= end_date:
-        for ticker in TICKERS:
-            print(current_date.strftime("%Y-%m-%d"))
-            calculate_aggregate(current_date, ticker)
-
-        current_date += timedelta(days=1)

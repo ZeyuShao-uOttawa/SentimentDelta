@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint, current_app
 from sentence_transformers import SentenceTransformer
 from pymongo import errors
-from db.news import create_news
+from db.news_queries import create_news
 from utils.logger import get_logger
 from utils.sentiment import finbert_sentiment
 from utils.embeddings import get_embeddings
