@@ -3,43 +3,9 @@ from datetime import datetime
 from collections import Counter
 import math
 import numpy as np
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MONGODB_URI = os.getenv("MONGODB_URI_MEET", "mongodb://mongo:27017")
-DB_NAME = "stock_market_db"
-COLLECTION_NAME = "news"
-
-client = MongoClient(MONGODB_URI)
-db = client[DB_NAME]
-collection = db[COLLECTION_NAME]
-
-def retrieve_daily_news(search_date, ticker):
-    # Specify which fields you want returned (Only need sentiment)
-    projection = {
-        "_id": 0,
-        "sentiment": 1
-    }
-
-    query = {
-        "date": search_date,
-        "ticker": ticker
-    }
-
-    docs = list(collection.find(query, projection))
-    
-    if docs:
-        for doc in docs:
-            print(doc)
-    else:
-        print("No documents found for", ticker, "on", search_date)
-    
-    return docs
 
 def all_scores(docs):
-    return [d["sentiment_score"] for d in docs]
+    return [d["sentiment"]["score"] for d in docs]
 
 
 # Average sentiment score (High = Bullish | 0 = Neutral | Low = Bearish)
@@ -65,15 +31,14 @@ def sentiment_attention(docs):
     return att
 
 def sentiment_bear_bull_ratio(docs):
-    bullish = sum(1 for d in docs if d["sentiment_score"] > 0)
-    bearish = sum(1 for d in docs if d["sentiment_score"] < 0)
+    bullish = sum(1 for d in docs if d["sentiment"]["score"] > 0)
+    bearish = sum(1 for d in docs if d["sentiment"]["score"] < 0)
 
     bear_bull_ratio = bullish / (bearish + 1)
 
     return bear_bull_ratio
 
-def daily_aggregate(search_date, ticker):
-    docs = retrieve_daily_news(search_date, ticker)
+def daily_aggregate(docs):
 
     sent_mean = sentiment_mean(docs)
     sent_std = sentiment_mean(docs)
@@ -87,8 +52,4 @@ def daily_aggregate(search_date, ticker):
         "bear_bull_ratio": bear_bull_ratio
     }
 
-if __name__ == "__main__":
-    search_date = "2026-01-11"
-    ticker = "AAPL"
-
-    retrieve_daily_news(search_date, ticker)
+    return features
