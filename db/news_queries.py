@@ -58,16 +58,32 @@ class _NewsManager:
             self.collection.find({"ticker": ticker})
         )
 
-    def find_by_ticker_and_date(self, ticker: str, date_str: str) -> List[Dict[str, Any]]:
+    def find_by_ticker_and_date(self, ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
         """
         date_str format: YYYY-MM-DD
+        Optional `projection` dict to limit returned fields.
         """
-        return list(
-            self.collection.find({
-                "ticker": ticker,
-                "date": date_str
-            })
-        )
+        query = {
+            "ticker": ticker,
+            "date": date_str
+        }
+        if projection:
+            return list(self.collection.find(query, projection))
+        return list(self.collection.find(query))
+    
+    def get_news_all_dates(self, ticker: Optional[str] = None) -> List[str]:
+        """
+        Get all unique dates for news articles.
+        
+        Args:
+            ticker (str, optional): If provided, filter by ticker.
+        
+        Returns:
+            List of unique date strings (YYYY-MM-DD), sorted ascending.
+        """
+        query = {"ticker": ticker} if ticker else {}
+        dates = self.collection.distinct("date", filter=query)
+        return sorted(dates)
 
     def find_by_url(self, url: str) -> Optional[Dict[str, Any]]:
         """Find a news article by URL."""
@@ -175,8 +191,8 @@ def get_all_news(limit: int = 100) -> List[Dict[str, Any]]:
 def get_news_by_ticker(ticker: str) -> List[Dict[str, Any]]:
     return _news_manager.find_by_ticker(ticker)
 
-def get_news_by_ticker_and_date(ticker: str, date_str: str) -> List[Dict[str, Any]]:
-    return _news_manager.find_by_ticker_and_date(ticker, date_str)
+def get_news_by_ticker_and_date(ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
+    return _news_manager.find_by_ticker_and_date(ticker, date_str, projection)
 
 def get_news_date_range(ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
     return _news_manager.find_date_range(ticker, start_date, end_date)
@@ -204,3 +220,9 @@ def delete_news(doc_id: str) -> bool:
 
 def delete_news_by_ticker(ticker: str) -> int:
     return _news_manager.delete_by_ticker(ticker)
+
+def get_news_dates(ticker: Optional[str] = None) -> List[str]:
+    """
+    Get all unique news dates. Optionally filter by ticker.
+    """
+    return _news_manager.get_news_all_dates(ticker)

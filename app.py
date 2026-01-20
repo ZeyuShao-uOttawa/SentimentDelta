@@ -7,8 +7,9 @@ from jobs.jobs import setup_scheduler
 from routes import api
 from config.config import ApiConfig
 from db.client import MongoDBClient
-from db.stock_price import initialize_stock_manager
-from db.news import initialize_news_manager
+from db.stock_price_queries import initialize_stock_manager
+from db.news_queries import initialize_news_manager
+from db.aggregates_queries import initialize_aggregates_manager
 from utils.embeddings import setup_embeddings
 
 def create_app():
@@ -25,9 +26,10 @@ def create_app():
     if not setup_embeddings(ApiConfig.EMBEDDING_MODEL):
         logger.error("Failed to setup embeddings model")
 
-    # Initialize StockPriceManager singleton, which uses db_manager internally
+    # Initialize DB managers
     initialize_stock_manager(db_client)
     initialize_news_manager(db_client)
+    initialize_aggregates_manager(db_client)
 
     app.db_client = db_client
 

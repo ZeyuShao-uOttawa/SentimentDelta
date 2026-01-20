@@ -5,7 +5,7 @@ from pymongo import errors, UpdateOne
 from logger import get_logger
 from datetime import datetime, timezone
 import pandas as pd
-from db.database import MongoDBManager
+from db.client import MongoDBClient
 
 logger = get_logger(__name__)
 
@@ -26,7 +26,7 @@ class StockPriceManager:
             self.collection_name = "stock_prices"
             self._initialized = True
     
-    def initialize(self, db_manager: MongoDBManager, collection_name: str = "stock_prices"):
+    def initialize(self, db_manager: MongoDBClient, collection_name: str = "stock_prices"):
         """Initialize the manager with database connection."""
         self.db_manager = db_manager
         self.collection_name = collection_name
@@ -210,7 +210,7 @@ class StockPriceManager:
 _stock_manager = StockPriceManager()
 
 # Module-level functions that use the singleton
-def initialize_stock_manager(db_manager: MongoDBManager, collection_name: str = "stock_prices"):
+def initialize_stock_manager(db_manager: MongoDBClient, collection_name: str = "stock_prices"):
     """Initialize the global stock manager."""
     _stock_manager.initialize(db_manager, collection_name)
 
