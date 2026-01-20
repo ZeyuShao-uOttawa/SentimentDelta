@@ -9,6 +9,7 @@ from db.stock_price_queries import (
 from config.config import ApiConfig
 from scrapers.yahoo_stock_news import YahooFinanceScraper
 from scrapers.finviz_stock_news import scrape_finviz_ticker_news
+from scrapers.yahoo_stock_price import process_ticker_data
 from db.news_queries import (
     create_many_news, 
     get_latest_news_by_ticker,
