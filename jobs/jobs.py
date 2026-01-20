@@ -257,7 +257,7 @@ def fetch_and_store_finviz_news():
                             continue
 
                         # Get the body here
-                        body = rticle_text(article["url"]) or None
+                        body = get_article_text(article["url"]) or None
                         
                         # Generate sentiment analysis
                         sentiment = finbert_sentiment(article["title"] + " " + (body or ""))
