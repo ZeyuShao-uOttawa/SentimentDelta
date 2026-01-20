@@ -1,21 +1,16 @@
-from pymongo import MongoClient
 from datetime import datetime, timedelta
 from utils.sentiment import finbert_sentiment
-from utils.daily_aggregate  import daily_aggregate
+from utils.daily_aggregate import daily_aggregate
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+from db.client import MongoDBClient
+from db.news_queries import get_news_by_ticker_and_date
+from db.aggregates_queries import create_aggregate
 
-MONGO_URI = os.getenv("MONGO_URI_MEET", "mongodb://mongo:27017")
-DB_NAME = "stock_market_db"
-COLLECTION_NAME = "news"
-TARGET_COLLECTION_NAME = "aggregates"
+from logger import get_logger
 
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-collection = db[COLLECTION_NAME]
-target_collection = db[TARGET_COLLECTION_NAME]
+logger = get_logger(__name__)
 
 def calculate_aggregate(search_date, ticker):
     """
@@ -26,20 +21,17 @@ def calculate_aggregate(search_date, ticker):
         "sentiment": 1
     }
 
-    query = {
-        "date": search_date.strftime("%Y-%m-%d"),
-        "ticker": ticker
-    }
+    date_str = search_date.strftime("%Y-%m-%d")
 
-    docs = list(collection.find(query, projection))
+    docs = get_news_by_ticker_and_date(ticker, date_str, projection)
 
     if docs:
         features = daily_aggregate(docs)
-        features["date"] = search_date.strftime("%Y-%m-%d")
+        features["date"] = date_str
         features["ticker"] = ticker
 
-        print(features)
+        logger.info(f"Calculated features: {features}, for date: {date_str}, ticker: {ticker}")
 
-        target_collection.insert_one(features)
+        create_aggregate(features)
     else:
-        print("No documents found for", ticker, "on", search_date)
+        logger.info(f"No documents found for {ticker} on {date_str}")

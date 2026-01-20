@@ -2,8 +2,6 @@ from logger import get_logger
 from datetime import datetime, timedelta
 import pandas as pd
 from utils.scraper import get_article_text
-
-from scrapers.finviz_stock_news import process_ticker_data
 from db.stock_price_queries import (
     create_many_stock_data,
     get_latest_stock_data
@@ -14,8 +12,14 @@ from scrapers.finviz_stock_news import scrape_finviz_ticker_news
 from db.news_queries import (
     create_many_news, 
     get_latest_news_by_ticker,
-    get_news_by_url
+    get_news_by_url,
+    get_news_dates
 )
+from db.aggregates_queries import (
+    get_aggregate_dates,
+)
+
+from scripts.calculate_all_aggregates import calculate_aggregate
 from utils.sentiment import finbert_sentiment
 from utils.embeddings import get_embeddings
 from datetime import datetime
@@ -290,3 +294,63 @@ def fetch_and_store_finviz_news():
         except Exception as e:
             logger.error(f"Error fetching Finviz news for ticker {ticker}: {str(e)}", exc_info=True)
             continue
+
+def process_missing_aggregates():
+    """Process missing aggregates by comparing news dates vs aggregate dates for each ticker."""
+    
+    if not ApiConfig.MONGODB_URI:
+        logger.error("Configuration not initialized")
+        return
+    
+    tickers = ApiConfig.TICKERS
+    
+    logger.info(f"Starting missing aggregates processing for {len(tickers)} tickers: {tickers}")
+    
+    total_processed = 0
+    total_missing = 0
+    
+    for ticker in tickers:
+        try:
+            logger.info(f"Processing missing aggregates for ticker: {ticker}")
+            
+            # Get all news dates for this ticker
+            news_dates = get_news_dates(ticker)
+            logger.info(f"Found {len(news_dates)} news dates for {ticker}: {news_dates[:5]}{'...' if len(news_dates) > 5 else ''}")
+            
+            # Get all aggregate dates for this ticker
+            aggregate_dates = get_aggregate_dates(ticker)
+            logger.info(f"Found {len(aggregate_dates)} aggregate dates for {ticker}: {aggregate_dates[:5]}{'...' if len(aggregate_dates) > 5 else ''}")
+            
+            # Find missing dates (news dates that don't have aggregates)
+            missing_dates = set(news_dates) - set(aggregate_dates)
+            missing_dates = sorted(list(missing_dates))
+            
+            if missing_dates:
+                logger.info(f"Found {len(missing_dates)} missing aggregate dates for {ticker}: {missing_dates}")
+                total_missing += len(missing_dates)
+                
+                # Process each missing date
+                for date_str in missing_dates:
+                    try:
+                        logger.info(f"Processing aggregate for {ticker} on {date_str}")
+                        
+                        # Convert date string to datetime object for calculate_aggregate
+                        search_date = datetime.strptime(date_str, "%Y-%m-%d")
+                        
+                        # Call the calculate_aggregate function
+                        calculate_aggregate(search_date, ticker)
+                        
+                        total_processed += 1
+                        logger.info(f"Successfully processed aggregate for {ticker} on {date_str}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing aggregate for {ticker} on {date_str}: {str(e)}", exc_info=True)
+                        continue
+            else:
+                logger.info(f"No missing aggregates found for {ticker} - all news dates have corresponding aggregates")
+                
+        except Exception as e:
+            logger.error(f"Error processing missing aggregates for ticker {ticker}: {str(e)}", exc_info=True)
+            continue
+    
+    logger.info(f"Missing aggregates processing complete. Processed {total_processed}/{total_missing} missing aggregates across {len(tickers)} tickers")

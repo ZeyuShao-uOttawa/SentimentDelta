@@ -7,6 +7,7 @@ from jobs.worker_file import (
     fetch_and_store_stock_prices,
     fetch_and_store_stock_news,
     fetch_and_store_finviz_news,
+    process_missing_aggregates,
 )
 from logger import get_logger
 
@@ -38,6 +39,11 @@ def register_jobs(scheduler):
     """
     Register all scheduled jobs with the APScheduler instance.
     
+    Job types: 
+        interval (repeats every N time)
+        date (runs once at a specific time) 
+        cron (runs on specific schedule)
+
     Args:
         scheduler: APScheduler instance.
     """
@@ -81,19 +87,32 @@ def register_jobs(scheduler):
         fetch_and_store_finviz_news()
 
     # -----------------------
+    # Daily aggregate calculation job, daily one time
+    # -----------------------
+    @scheduler.task('cron', id='daily_aggregate_calculation', hour=0, minute=0)
+    def daily_aggregate_job():
+        logger.info("Running daily aggregate calculation job at 12:00 AM")
+        process_missing_aggregates()
+
+    # -----------------------
     # Initial delayed fetch jobs
     # -----------------------
-    @scheduler.task('date', id='initial_stock_fetch', run_date=datetime.now() + timedelta(seconds=30))
-    def initial_stock_fetch():
-        logger.info("Running delayed initial stock price fetch after server startup")
-        fetch_and_store_stock_prices()
+    # @scheduler.task('date', id='initial_stock_fetch', run_date=datetime.now() + timedelta(seconds=30))
+    # def initial_stock_fetch():
+    #     logger.info("Running delayed initial stock price fetch after server startup")
+    #     fetch_and_store_stock_prices()
 
-    @scheduler.task('date', id='initial_stock_news_fetch', run_date=datetime.now() + timedelta(seconds=60))
-    def initial_stock_news_fetch():
-        logger.info("Running delayed initial stock news fetch after server startup")
-        fetch_and_store_stock_news()
+    # @scheduler.task('date', id='initial_stock_news_fetch', run_date=datetime.now() + timedelta(seconds=60))
+    # def initial_stock_news_fetch():
+    #     logger.info("Running delayed initial stock news fetch after server startup")
+    #     fetch_and_store_stock_news()
 
-    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=90))
-    def initial_finviz_news_fetch():
-        logger.info("Running delayed initial Finviz news fetch after server startup")
-        fetch_and_store_finviz_news()
+    # @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=90))
+    # def initial_finviz_news_fetch():
+    #     logger.info("Running delayed initial Finviz news fetch after server startup")
+    #     fetch_and_store_finviz_news()
+
+    @scheduler.task('date', id='initial_aggregate_calculation', run_date=datetime.now() + timedelta(seconds=30))
+    def initial_aggregate_calculation():
+        logger.info("Running delayed initial aggregate calculation after server startup")
+        process_missing_aggregates()

@@ -72,6 +72,19 @@ class _AggregatesManager:
 			return list(news_col.find(query, projection))
 		return list(news_col.find(query))
 
+	def get_aggregates_all_dates(self, ticker: Optional[str] = None) -> List[str]:
+		"""Get all unique dates for aggregate documents.
+
+		Args:
+			ticker (str, optional): If provided, filter by ticker.
+
+		Returns:
+			List of unique date strings (YYYY-MM-DD), sorted ascending.
+		"""
+		query = {"ticker": ticker} if ticker else {}
+		dates = self.collection.distinct("date", filter=query)
+		return sorted(dates)
+
 	def update_by_ticker_and_date(self, ticker: str, date_str: str, updates: Dict[str, Any]) -> bool:
 		result = self.collection.update_one({"ticker": ticker, "date": date_str}, {"$set": updates})
 		return result.matched_count == 1
@@ -163,4 +176,5 @@ def delete_aggregate(doc_id: str) -> bool:
 def delete_aggregates_by_ticker(ticker: str) -> int:
 	return _aggregates_manager.delete_by_ticker(ticker)
 
- 
+def get_aggregate_dates(ticker: Optional[str] = None) -> List[str]:
+    return _aggregates_manager.get_aggregates_all_dates(ticker)
