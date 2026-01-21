@@ -151,12 +151,11 @@ class YahooFinanceScraper:
                     if not exact_day_only and days_ago > target_days:
                         return None
             
-            # Extract body
-            # TODO: can move to jobs and getch the summary there and avoid slowing down the scraper
+            # Moved to jobs and fetch the summary there and avoid slowing down the scraper
             # If URL is present in database, skip fetching body
-            if 'url' in data:
-                article_text = get_article_text(data['url'])
-                data['body'] = article_text
+            # if 'url' in data:
+            #     article_text = get_article_text(data['url'])
+            #     data['body'] = article_text
             
             return data
             
