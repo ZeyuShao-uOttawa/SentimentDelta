@@ -149,9 +149,18 @@ def fetch_and_store_stock_news():
                 for article in news_items:
                     try:
                         # Skip if essential fields are missing
-                        if not all(k in article for k in ("title", "url", "date", "body")):
+                        if not all(k in article for k in ("title", "url", "date")):
+                            continue
+
+                        # Skip if URL already exists in database
+                        if get_news_by_url(article["url"]):
+                            logger.debug(f"URL already exists in database: {article['url']}")
                             continue
                         
+                        # Get the body here
+                        if article["url"]:
+                            article["body"] = get_article_text(article["url"]) or None
+
                         # Generate sentiment analysis
                         sentiment = finbert_sentiment(article["title"] + " " + (article["body"] or ""))
                         
@@ -168,7 +177,7 @@ def fetch_and_store_stock_news():
                             "title": article["title"],
                             "url": article["url"],
                             "date": article["date"],
-                            "body": article.get("body"),
+                            "body": article["body"],
                             "embedding": embedding,
                             "ingested_at": datetime.now(),
                             "sentiment": {
