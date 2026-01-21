@@ -1,7 +1,7 @@
 from logger import get_logger
 from datetime import datetime, timedelta
-from tqdm import tqdm
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 from utils.scraper import get_article_text
 from db.stock_price_queries import (
     create_many_stock_data,
@@ -17,20 +17,66 @@ from db.news_queries import (
     get_news_by_url,
     get_news_dates
 )
-from db.aggregates_queries import (
-    get_aggregate_dates,
-)
-
+from db.aggregates_queries import get_aggregate_dates
 from scripts.calculate_all_aggregates import calculate_aggregate
 from utils.sentiment import finbert_sentiment
 from utils.embeddings import get_embeddings
-from datetime import datetime
 
 logger = get_logger(__name__)
 
+MAX_WORKERS = 10
+
+def get_article_body_safe(url):
+    """Safely fetch article body."""
+    try:
+        return get_article_text(url) if url else None
+    except Exception as e:
+        logger.warning(f"Error fetching {url}: {e}")
+        return None
+
+def process_article(ticker, article, body):
+    """Process a single article with sentiment and embeddings."""
+    try:
+        if not all(k in article for k in ("title", "url", "date")):
+            return None
+        
+        if get_news_by_url(article["url"]):
+            return None
+        
+        sentiment = finbert_sentiment(article["title"] + " " + (body or ""))
+        
+        embedding_text = f"{ticker} {article['title']} {body or ''} {article.get('date', '')}"
+        embedding = get_embeddings(embedding_text)
+        if embedding is not None:
+            embedding = embedding.tolist()
+        
+        doc = {
+            "ticker": ticker,
+            "source": article.get("source", "yahoo_finance"),
+            "title": article["title"],
+            "url": article["url"],
+            "date": article["date"],
+            "body": body,
+            "embedding": embedding,
+            "ingested_at": datetime.now(),
+            "sentiment": {
+                "score": sentiment["score"],
+                "positive": sentiment["positive"],
+                "neutral": sentiment["neutral"],
+                "negative": sentiment["negative"]
+            }
+        }
+        
+        if "timestamp" in article:
+            doc["timestamp"] = article["timestamp"]
+        
+        return doc
+    except Exception as e:
+        logger.warning(f"Error processing article: {e}")
+        return None
+
 def fetch_and_store_stock_prices():
     """Fetch and store stock prices for all configured tickers."""
-    
     if not ApiConfig.MONGODB_URI:
         logger.error("Configuration not initialized")
         return
@@ -41,51 +87,32 @@ def fetch_and_store_stock_prices():
     
     logger.info(f"Starting stock price fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tqdm(tickers, desc="Stock price tickers"):
+    for ticker in tickers:
         try:
             logger.info(f"Processing ticker: {ticker}")
-            
-            # Get latest data from database
             latest_data = get_latest_stock_data(ticker)
             
             if latest_data:
-                # Get timestamp from latest data and fetch from that point
                 latest_datetime = latest_data['Datetime']
                 if isinstance(latest_datetime, str):
                     latest_datetime = pd.to_datetime(latest_datetime)
                 
-                # Start from the next interval after the latest data
                 start_time = latest_datetime + timedelta(minutes=15)
                 start_date = start_time.strftime('%Y-%m-%d')
                 
                 logger.info(f"Latest data for {ticker} found at {latest_datetime}. Fetching from {start_date}")
                 
-                # Only fetch if start_date is not in the future
                 if start_time < datetime.now():
-                    ticker_data = process_ticker_data(
-                        ticker=ticker,
-                        interval=interval,
-                        start=start_date,
-                        end=None
-                    )
+                    ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=None)
                 else:
                     logger.info(f"Latest data for {ticker} is up to date")
                     ticker_data = None
             else:
-                # No data found, fetch last N days
                 end_date = datetime.now()
                 start_date = (end_date - timedelta(days=fallback_days)).strftime('%Y-%m-%d')
-                
                 logger.info(f"No data found for {ticker}. Fetching last {fallback_days} days from {start_date}")
-                
-                ticker_data = process_ticker_data(
-                    ticker=ticker,
-                    interval=interval,
-                    start=start_date,
-                    end=None
-                )
+                ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=None)
             
-            # Save data immediately after processing each ticker
             if ticker_data and len(ticker_data) > 0:
                 try:
                     upserted_count = create_many_stock_data(ticker_data)
@@ -101,7 +128,6 @@ def fetch_and_store_stock_prices():
 
 def fetch_and_store_yahoo_news():
     """Fetch and store stock news articles."""
-    
     if not ApiConfig.MONGODB_URI:
         logger.error("Configuration not initialized")
         return
@@ -111,30 +137,25 @@ def fetch_and_store_yahoo_news():
     
     logger.info(f"Starting stock news fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tqdm(tickers, desc="Yahoo news tickers"):
+    for ticker in tickers:
         try:
             logger.info(f"Processing ticker: {ticker}")
-            
-            # Get latest news from database
             latest_news = get_latest_news_by_ticker(ticker)
             
             if latest_news:
                 latest_date = latest_news.get('date')
                 logger.info(f"Latest news for {ticker} found on {latest_date}. Fetching newer articles")
                 
-                # Calculate target days based on latest news date
                 if latest_date:
                     try:
                         latest_date_obj = datetime.strptime(latest_date, '%Y-%m-%d')
                         days_since_latest = (datetime.now() - latest_date_obj).days
-                        # Fetch a bit more than needed to ensure we don't miss anything
                         target_days = max(0, days_since_latest - 1)
                     except:
                         target_days = news_fetch_days
                 else:
                     target_days = news_fetch_days
             else:
-                # No news found, fetch last N days
                 logger.info(f"No news found for {ticker}. Fetching last {news_fetch_days} days")
                 target_days = news_fetch_days
             
@@ -142,58 +163,17 @@ def fetch_and_store_yahoo_news():
             news_items = scrape_yahoo_finance(ticker, target_days=target_days, exact_day_only=False)
             
             if news_items and len(news_items) > 0:
-                # Process each news item with sentiment and embeddings
+                # Fetch all bodies in parallel
+                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    bodies = list(executor.map(lambda a: get_article_body_safe(a.get("url")), news_items))
+                
+                # Process articles
                 processed_items = []
-                
-                for article in tqdm(news_items, desc=f"Processing {ticker} articles", leave=False):
-                    try:
-                        # Skip if essential fields are missing
-                        if not all(k in article for k in ("title", "url", "date")):
-                            continue
-
-                        # Skip if URL already exists in database
-                        if get_news_by_url(article["url"]):
-                            logger.debug(f"URL already exists in database: {article['url']}")
-                            continue
-                        
-                        # Get the body here
-                        if article["url"]:
-                            article["body"] = get_article_text(article["url"]) or None
-
-                        # Generate sentiment analysis
-                        sentiment = finbert_sentiment(article["title"] + " " + (article["body"] or ""))
-                        
-                        # Generate embeddings
-                        embedding_text = f"{ticker} {article['title']} {article['body'] or ''} {article['date']}"
-                        embedding = get_embeddings(embedding_text)
-                        if embedding is not None:
-                            embedding = embedding.tolist()
-                        
-                        # Create document in the required format
-                        doc = {
-                            "ticker": ticker,
-                            "source": "yahoo_finance",
-                            "title": article["title"],
-                            "url": article["url"],
-                            "date": article["date"],
-                            "body": article["body"],
-                            "embedding": embedding,
-                            "ingested_at": datetime.now(),
-                            "sentiment": {
-                                "score": sentiment["score"],
-                                "positive": sentiment["positive"],
-                                "neutral": sentiment["neutral"],
-                                "negative": sentiment["negative"]
-                            }
-                        }
-                        
+                for article, body in zip(news_items, bodies):
+                    doc = process_article(ticker, article, body)
+                    if doc:
                         processed_items.append(doc)
-                        
-                    except Exception as e:
-                        logger.warning(f"Error processing article for {ticker}: {e}")
-                        continue
                 
-                # Save processed news immediately after processing each ticker
                 if processed_items:
                     try:
                         upserted_count = create_many_news(processed_items)
@@ -211,20 +191,16 @@ def fetch_and_store_yahoo_news():
 
 def fetch_and_store_finviz_news():
     """Fetch and store stock news articles from Finviz."""
-    
     if not ApiConfig.MONGODB_URI:
         logger.error("Configuration not initialized")
         return
     
     tickers = ApiConfig.TICKERS
-    
     logger.info(f"Starting Finviz news fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tqdm(tickers, desc="Finviz news tickers"):
+    for ticker in tickers:
         try:
             logger.info(f"Processing ticker: {ticker}")
-            
-            # Get latest news from database for this ticker
             latest_news = get_latest_news_by_ticker(ticker)
             
             if latest_news:
@@ -237,58 +213,21 @@ def fetch_and_store_finviz_news():
             news_items = scrape_finviz_ticker_news(ticker, custom_logger=logger)
             
             if news_items and len(news_items) > 0:
-                # Process each news item with sentiment and embeddings
+                # Add source tag
+                for article in news_items:
+                    article["source"] = "finviz"
+                
+                # Fetch all bodies in parallel
+                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    bodies = list(executor.map(lambda a: get_article_body_safe(a.get("url")), news_items))
+                
+                # Process articles
                 processed_items = []
-                
-                for article in tqdm(news_items, desc=f"Processing {ticker} finviz articles", leave=False):
-                    try:
-                        # Skip if essential fields are missing
-                        if not all(k in article for k in ("title", "url", "date")):
-                            continue
-                        
-                        # Skip if URL already exists in database
-                        if get_news_by_url(article["url"]):
-                            logger.debug(f"URL already exists in database: {article['url']}")
-                            continue
-
-                        # Get the body here
-                        body = get_article_text(article["url"]) or None
-                        
-                        # Generate sentiment analysis
-                        sentiment = finbert_sentiment(article["title"] + " " + (body or ""))
-                        
-                        # Generate embeddings
-                        embedding_text = f"{ticker} {article['title']} {body or ''}"
-                        embedding = get_embeddings(embedding_text)
-                        if embedding is not None:
-                            embedding = embedding.tolist()
-                        
-                        # Create document in the required format
-                        doc = {
-                            "ticker": ticker,
-                            "source": "finviz",
-                            "title": article["title"],
-                            "url": article["url"],
-                            "date": article["date"],
-                            "body": body,
-                            "embedding": embedding,
-                            "ingested_at": datetime.now(),
-                            "timestamp": article["timestamp"],
-                            "sentiment": {
-                                "score": sentiment["score"],
-                                "positive": sentiment["positive"],
-                                "neutral": sentiment["neutral"],
-                                "negative": sentiment["negative"]
-                            }
-                        }
-                        
+                for article, body in zip(news_items, bodies):
+                    doc = process_article(ticker, article, body)
+                    if doc:
                         processed_items.append(doc)
-                        
-                    except Exception as e:
-                        logger.warning(f"Error processing Finviz article for {ticker}: {e}")
-                        continue
                 
-                # Save processed news immediately after processing each ticker
                 if processed_items:
                     try:
                         upserted_count = create_many_news(processed_items)
@@ -306,57 +245,39 @@ def fetch_and_store_finviz_news():
 
 def process_missing_aggregates():
     """Process missing aggregates by comparing news dates vs aggregate dates for each ticker."""
-    
     if not ApiConfig.MONGODB_URI:
         logger.error("Configuration not initialized")
         return
     
     tickers = ApiConfig.TICKERS
-    
     logger.info(f"Starting missing aggregates processing for {len(tickers)} tickers: {tickers}")
     
     total_processed = 0
     total_missing = 0
     
-    for ticker in tqdm(tickers, desc="Tickers for aggregates"):
+    for ticker in tickers:
         try:
             logger.info(f"Processing missing aggregates for ticker: {ticker}")
             
-            # Get all news dates for this ticker
             news_dates = get_news_dates(ticker)
             logger.info(f"Found {len(news_dates)} news dates for {ticker}: {news_dates[:5]}{'...' if len(news_dates) > 5 else ''}")
             
-            # Get all aggregate dates for this ticker
             aggregate_dates = get_aggregate_dates(ticker)
             logger.info(f"Found {len(aggregate_dates)} aggregate dates for {ticker}: {aggregate_dates[:5]}{'...' if len(aggregate_dates) > 5 else ''}")
             
-            # Find missing dates (news dates that don't have aggregates)
-            missing_dates = set(news_dates) - set(aggregate_dates)
-            missing_dates = sorted(list(missing_dates))
+            missing_dates = sorted(list(set(news_dates) - set(aggregate_dates)))
             
             if missing_dates:
                 logger.info(f"Found {len(missing_dates)} missing aggregate dates for {ticker}: {missing_dates}")
                 total_missing += len(missing_dates)
                 
-                # Process each missing date
-                for date_str in tqdm(missing_dates, desc=f"Aggregates for {ticker}", leave=False):
+                for date_str in missing_dates:
                     try:
-                        # Convert date string to datetime object for calculate_aggregate
-                        search_date = datetime.strptime(date_str, "%Y-%m-%d")
-                        
-                        # Skip today's date
-                        if search_date.date() == datetime.now().date():
-                            logger.info(f"Skipping today's date for {ticker}: {date_str}")
-                            continue
-                        
                         logger.info(f"Processing aggregate for {ticker} on {date_str}")
-                        
-                        # Call the calculate_aggregate function
+                        search_date = datetime.strptime(date_str, "%Y-%m-%d")
                         calculate_aggregate(search_date, ticker)
-                        
                         total_processed += 1
                         logger.info(f"Successfully processed aggregate for {ticker} on {date_str}")
-                        
                     except Exception as e:
                         logger.error(f"Error processing aggregate for {ticker} on {date_str}: {str(e)}", exc_info=True)
                         continue
