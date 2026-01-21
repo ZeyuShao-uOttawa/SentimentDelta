@@ -341,10 +341,15 @@ def process_missing_aggregates():
                 # Process each missing date
                 for date_str in tqdm(missing_dates, desc=f"Aggregates for {ticker}", leave=False):
                     try:
-                        logger.info(f"Processing aggregate for {ticker} on {date_str}")
-                        
                         # Convert date string to datetime object for calculate_aggregate
                         search_date = datetime.strptime(date_str, "%Y-%m-%d")
+                        
+                        # Skip today's date
+                        if search_date.date() == datetime.now().date():
+                            logger.info(f"Skipping today's date for {ticker}: {date_str}")
+                            continue
+                        
+                        logger.info(f"Processing aggregate for {ticker} on {date_str}")
                         
                         # Call the calculate_aggregate function
                         calculate_aggregate(search_date, ticker)
