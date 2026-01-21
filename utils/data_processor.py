@@ -1,14 +1,13 @@
 """Simple stock data processing."""
 
-import logging
+from logger import get_logger
 from typing import List, Dict, Optional
 from tqdm import tqdm
 import yfinance as yf
 import pandas as pd
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def process_ticker_data(ticker, period="1mo", interval="1d", custom_logger=None):

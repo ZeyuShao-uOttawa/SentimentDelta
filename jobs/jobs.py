@@ -5,7 +5,7 @@ from flask_apscheduler import APScheduler
 from config.config import ApiConfig
 from jobs.worker_file import (
     fetch_and_store_stock_prices,
-    fetch_and_store_stock_news,
+    fetch_and_store_yahoo_news,
     fetch_and_store_finviz_news,
     process_missing_aggregates,
 )
@@ -74,7 +74,7 @@ def register_jobs(scheduler):
         logger.info(
             f"Running scheduled stock news fetch job (every {fetch_interval_hours} hours)"
         )
-        fetch_and_store_stock_news()
+        fetch_and_store_yahoo_news()
 
     # -----------------------
     # Finviz news fetching job
@@ -102,17 +102,18 @@ def register_jobs(scheduler):
         logger.info("Running delayed initial stock price fetch after server startup")
         fetch_and_store_stock_prices()
 
-    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=90))
+    @scheduler.task('date', id='initial_finviz_news_fetch', 
+    run_date=datetime.now() + timedelta(seconds=90))
     def initial_finviz_news_fetch():
         logger.info("Running delayed initial Finviz news fetch after server startup")
         fetch_and_store_finviz_news()
 
-    @scheduler.task('date', id='initial_stock_news_fetch', run_date=datetime.now() + timedelta(minutes=5))
-    def initial_stock_news_fetch():
-        logger.info("Running delayed initial stock news fetch after server startup")
-        fetch_and_store_stock_news()
+    @scheduler.task('date', id='initial_yahoo_news_fetch', run_date=datetime.now() + timedelta(seconds=30))
+    def initial_yahoo_news_fetch():
+        logger.info("Running delayed initial Yahoo news fetch after server startup")
+        fetch_and_store_yahoo_news()
 
-    @scheduler.task('date', id='initial_aggregate_calculation', run_date=datetime.now() + timedelta(minutes=10))
+    @scheduler.task('date', id='initial_aggregate_calculation', run_date=datetime.now() + timedelta(seconds=30))
     def initial_aggregate_calculation():
         logger.info("Running delayed initial aggregate calculation after server startup")
         process_missing_aggregates()

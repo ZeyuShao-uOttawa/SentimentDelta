@@ -1,8 +1,8 @@
+from logger import get_logger
 import atexit
 from flask import Flask
 from flask_cors import CORS
 from db.database import MongoDBManager
-from logger import get_logger
 from jobs.jobs import setup_scheduler
 from routes import api
 from config.config import ApiConfig
