@@ -1,5 +1,6 @@
 from logger import get_logger
 from datetime import datetime, timedelta
+from tqdm import tqdm
 import pandas as pd
 from utils.scraper import get_article_text
 from db.stock_price_queries import (
@@ -7,7 +8,7 @@ from db.stock_price_queries import (
     get_latest_stock_data
 )
 from config.config import ApiConfig
-from scrapers.yahoo_stock_news import YahooFinanceScraper
+from scrapers.yahoo_stock_news import scrape_yahoo_finance
 from scrapers.finviz_stock_news import scrape_finviz_ticker_news
 from scrapers.yahoo_stock_price import process_ticker_data
 from db.news_queries import (
@@ -40,7 +41,7 @@ def fetch_and_store_stock_prices():
     
     logger.info(f"Starting stock price fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Stock price tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             
@@ -98,7 +99,7 @@ def fetch_and_store_stock_prices():
             logger.error(f"Error processing ticker {ticker}: {str(e)}", exc_info=True)
             continue
 
-def fetch_and_store_stock_news():
+def fetch_and_store_yahoo_news():
     """Fetch and store stock news articles."""
     
     if not ApiConfig.MONGODB_URI:
@@ -110,9 +111,7 @@ def fetch_and_store_stock_news():
     
     logger.info(f"Starting stock news fetch for {len(tickers)} tickers: {tickers}")
     
-    scraper = YahooFinanceScraper()
-    
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Yahoo news tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             
@@ -140,13 +139,13 @@ def fetch_and_store_stock_news():
                 target_days = news_fetch_days
             
             logger.info(f"Fetching news for ticker: {ticker} (target_days={target_days})")
-            news_items = scraper.scrape(ticker, target_days=target_days, exact_day_only=False)
+            news_items = scrape_yahoo_finance(ticker, target_days=target_days, exact_day_only=False)
             
             if news_items and len(news_items) > 0:
                 # Process each news item with sentiment and embeddings
                 processed_items = []
                 
-                for article in news_items:
+                for article in tqdm(news_items, desc=f"Processing {ticker} articles", leave=False):
                     try:
                         # Skip if essential fields are missing
                         if not all(k in article for k in ("title", "url", "date")):
@@ -221,7 +220,7 @@ def fetch_and_store_finviz_news():
     
     logger.info(f"Starting Finviz news fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Finviz news tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             
@@ -241,7 +240,7 @@ def fetch_and_store_finviz_news():
                 # Process each news item with sentiment and embeddings
                 processed_items = []
                 
-                for article in news_items:
+                for article in tqdm(news_items, desc=f"Processing {ticker} finviz articles", leave=False):
                     try:
                         # Skip if essential fields are missing
                         if not all(k in article for k in ("title", "url", "date")):
@@ -319,7 +318,7 @@ def process_missing_aggregates():
     total_processed = 0
     total_missing = 0
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Tickers for aggregates"):
         try:
             logger.info(f"Processing missing aggregates for ticker: {ticker}")
             
@@ -340,7 +339,7 @@ def process_missing_aggregates():
                 total_missing += len(missing_dates)
                 
                 # Process each missing date
-                for date_str in missing_dates:
+                for date_str in tqdm(missing_dates, desc=f"Aggregates for {ticker}", leave=False):
                     try:
                         logger.info(f"Processing aggregate for {ticker} on {date_str}")
                         

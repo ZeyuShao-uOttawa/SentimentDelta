@@ -1,8 +1,9 @@
 """Simple web scraping for financial news."""
 
+
 import time
 import random
-import logging
+from logger import get_logger
 from datetime import datetime
 import re
 import requests
@@ -11,8 +12,7 @@ from newspaper import Article
 from tqdm import tqdm
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 MARKETWATCH_BASE_URL = "https://www.marketwatch.com"
 FINVIZ_BASE_URL = "https://finviz.com"
