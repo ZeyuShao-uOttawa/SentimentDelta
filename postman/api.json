@@ -1,0 +1,306 @@
+{
+    "info": {
+        "name": "SentimentDelta API",
+        "description": "Collection for all API endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/health",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Stock Prices - List Tickers",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/stock_prices/tickers",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "stock_prices",
+                        "tickers"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Stock Prices - Range (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/stock_prices/AMZN?start=2026-01-01&end=2026-01-20",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "stock_prices",
+                        "AMZN"
+                    ],
+                    "query": [
+                        {
+                            "key": "start",
+                            "value": "2026-01-01"
+                        },
+                        {
+                            "key": "end",
+                            "value": "2026-01-20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Stock Prices - Latest (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/stock_prices/AMZN/latest",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "stock_prices",
+                        "AMZN",
+                        "latest"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "News - List All",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/news/list",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "news",
+                        "list"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "News - By Ticker (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/news/ticker/AMZN/list",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "news",
+                        "ticker",
+                        "AMZN",
+                        "list"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "News - By Ticker & Date (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/news/ticker/AMZN/date/2026-01-21",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "news",
+                        "ticker",
+                        "AMZN",
+                        "date",
+                        "2026-01-21"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "News - Range (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/news/ticker/AMZN/range?start=2026-01-01&end=2026-01-20",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "news",
+                        "ticker",
+                        "AMZN",
+                        "range"
+                    ],
+                    "query": [
+                        {
+                            "key": "start",
+                            "value": "2026-01-01"
+                        },
+                        {
+                            "key": "end",
+                            "value": "2026-01-20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregates - List All",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregates - By Ticker (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates/ticker/AMZN",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates",
+                        "ticker",
+                        "AMZN"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregates - Range (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates/ticker/AMZN?start=2026-01-01&end=2026-01-20",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates",
+                        "ticker",
+                        "AMZN"
+                    ],
+                    "query": [
+                        {
+                            "key": "start",
+                            "value": "2026-01-01"
+                        },
+                        {
+                            "key": "end",
+                            "value": "2026-01-20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregates - By Ticker & Date (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates/ticker/AMZN?date=2026-01-21",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates",
+                        "ticker",
+                        "AMZN"
+                    ],
+                    "query": [
+                        {
+                            "key": "date",
+                            "value": "2026-01-21"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregates - Latest (AMZN)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates/ticker/AMZN/latest",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates",
+                        "ticker",
+                        "AMZN",
+                        "latest"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Aggregate Dates",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseURL}}/aggregates/dates?ticker=AMZN",
+                    "host": [
+                        "{{baseURL}}"
+                    ],
+                    "path": [
+                        "aggregates",
+                        "dates"
+                    ],
+                    "query": [
+                        {
+                            "key": "ticker",
+                            "value": "AMZN"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseURL",
+            "value": "http://localhost:3000"
+        }
+    ]
+}
