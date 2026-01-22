@@ -30,26 +30,26 @@ def sentiment_attention(docs):
 
     return att
 
-def sentiment_bear_bull_ratio(docs):
+def sentiment_bull_bear_ratio(docs):
     bullish = sum(1 for d in docs if d["sentiment"]["score"] > 0)
     bearish = sum(1 for d in docs if d["sentiment"]["score"] < 0)
 
-    bear_bull_ratio = bullish / (bearish + 1)
+    bull_bear_ratio = bullish / (bearish + 1)
 
-    return bear_bull_ratio
+    return bull_bear_ratio
 
 def daily_aggregate(docs):
 
     sent_mean = sentiment_mean(docs)
     sent_std = sentiment_mean(docs)
     att = sentiment_attention(docs)
-    bear_bull_ratio = sentiment_bear_bull_ratio(docs)
+    bull_bear_ratio = sentiment_bull_bear_ratio(docs)
 
     features = {
         "sent_mean": sent_mean,
         "sent_std": sent_std,
         "attention": att,
-        "bear_bull_ratio": bear_bull_ratio
+        "bull_bear_ratio": bull_bear_ratio
     }
 
     return features
