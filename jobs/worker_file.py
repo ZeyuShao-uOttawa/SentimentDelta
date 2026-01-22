@@ -2,7 +2,7 @@ from logger import get_logger
 from datetime import datetime, timedelta
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-from utils.scraper import get_article_text
+from utils.newpaper import get_article_text
 from tqdm import tqdm
 from db.stock_price_queries import (
     create_many_stock_data,
