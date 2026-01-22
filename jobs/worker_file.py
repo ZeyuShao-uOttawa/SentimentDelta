@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from utils.scraper import get_article_text
+from tqdm import tqdm
 from db.stock_price_queries import (
     create_many_stock_data,
     get_latest_stock_data
@@ -87,7 +88,7 @@ def fetch_and_store_stock_prices():
     
     logger.info(f"Starting stock price fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Stock prices - tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             latest_data = get_latest_stock_data(ticker)
@@ -137,7 +138,7 @@ def fetch_and_store_yahoo_news():
     
     logger.info(f"Starting stock news fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Yahoo news - tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             latest_news = get_latest_news_by_ticker(ticker)
@@ -161,15 +162,21 @@ def fetch_and_store_yahoo_news():
             
             logger.info(f"Fetching news for ticker: {ticker} (target_days={target_days})")
             news_items = scrape_yahoo_finance(ticker, target_days=target_days, exact_day_only=False)
+
+            logger.info(f"Fetched {len(news_items) if news_items else 0} news items for {ticker}")
             
             if news_items and len(news_items) > 0:
                 # Fetch all bodies in parallel
                 with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
                     bodies = list(executor.map(lambda a: get_article_body_safe(a.get("url")), news_items))
+
+                logger.info(f"Fetched article bodies for {len(bodies)} items for {ticker}")
                 
                 # Process articles
                 processed_items = []
-                for article, body in zip(news_items, bodies):
+                desc = f"Processing articles ({ticker})"
+                for article, body in tqdm(list(zip(news_items, bodies)), desc=desc):
+                    logger.debug(f"Processing article for {ticker}: {article.get('title')}")
                     doc = process_article(ticker, article, body)
                     if doc:
                         processed_items.append(doc)
@@ -198,7 +205,7 @@ def fetch_and_store_finviz_news():
     tickers = ApiConfig.TICKERS
     logger.info(f"Starting Finviz news fetch for {len(tickers)} tickers: {tickers}")
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Finviz news - tickers"):
         try:
             logger.info(f"Processing ticker: {ticker}")
             latest_news = get_latest_news_by_ticker(ticker)
@@ -211,6 +218,8 @@ def fetch_and_store_finviz_news():
             
             logger.info(f"Fetching Finviz news for ticker: {ticker}")
             news_items = scrape_finviz_ticker_news(ticker, custom_logger=logger)
+
+            logger.info(f"Fetched {len(news_items) if news_items else 0} Finviz news items for {ticker}")
             
             if news_items and len(news_items) > 0:
                 # Add source tag
@@ -220,10 +229,14 @@ def fetch_and_store_finviz_news():
                 # Fetch all bodies in parallel
                 with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
                     bodies = list(executor.map(lambda a: get_article_body_safe(a.get("url")), news_items))
+
+                logger.info(f"Fetched article bodies for {len(bodies)} Finviz items for {ticker}")
                 
                 # Process articles
                 processed_items = []
-                for article, body in zip(news_items, bodies):
+                desc = f"Processing Finviz articles ({ticker})"
+                for article, body in tqdm(list(zip(news_items, bodies)), desc=desc):
+                    logger.debug(f"Processing Finviz article for {ticker}: {article.get('title')}")
                     doc = process_article(ticker, article, body)
                     if doc:
                         processed_items.append(doc)
@@ -255,7 +268,7 @@ def process_missing_aggregates():
     total_processed = 0
     total_missing = 0
     
-    for ticker in tickers:
+    for ticker in tqdm(tickers, desc="Missing aggregates - tickers"):
         try:
             logger.info(f"Processing missing aggregates for ticker: {ticker}")
             
@@ -267,11 +280,19 @@ def process_missing_aggregates():
             
             missing_dates = sorted(list(set(news_dates) - set(aggregate_dates)))
             
+            # Always include today's date for re-processing
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            if today_str not in missing_dates:
+                missing_dates.append(today_str)
+                missing_dates = sorted(missing_dates)
+                logger.info(f"Added today's date ({today_str}) for re-processing")
+            
             if missing_dates:
                 logger.info(f"Found {len(missing_dates)} missing aggregate dates for {ticker}: {missing_dates}")
                 total_missing += len(missing_dates)
                 
-                for date_str in missing_dates:
+                desc = f"Aggregates to process ({ticker})"
+                for date_str in tqdm(missing_dates, desc=desc):
                     try:
                         logger.info(f"Processing aggregate for {ticker} on {date_str}")
                         search_date = datetime.strptime(date_str, "%Y-%m-%d")

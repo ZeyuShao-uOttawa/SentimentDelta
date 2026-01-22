@@ -34,7 +34,7 @@ def get_logger(name=None, level=ApiConfig.LOG_LEVEL, log_file=None):
     
     # Create formatter
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s \n',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     

@@ -86,7 +86,7 @@ class _AggregatesManager:
 		return sorted(dates)
 
 	def update_by_ticker_and_date(self, ticker: str, date_str: str, updates: Dict[str, Any]) -> bool:
-		result = self.collection.update_one({"ticker": ticker, "date": date_str}, {"$set": updates})
+		result = self.collection.update_one({"ticker": ticker, "date": date_str}, {"$set": updates}, upsert=True)
 		return result.matched_count == 1
 
 	def upsert_by_ticker_and_date(self, ticker: str, date_str: str, doc: Dict[str, Any]) -> Optional[ObjectId]:
@@ -169,6 +169,9 @@ def get_latest_aggregate_by_ticker(ticker: str) -> Optional[Dict[str, Any]]:
 
 def update_aggregate(doc_id: str, updates: Dict[str, Any]) -> bool:
 	return _aggregates_manager.update_by_id(doc_id, updates)
+
+def update_aggregate_by_ticker_and_date(ticker: str, date_str: str, updates: Dict[str, Any]) -> bool:
+	return _aggregates_manager.update_by_ticker_and_date(ticker, date_str, updates)
 
 def delete_aggregate(doc_id: str) -> bool:
 	return _aggregates_manager.delete_by_id(doc_id)

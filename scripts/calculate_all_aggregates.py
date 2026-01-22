@@ -6,6 +6,8 @@ from config.config import ApiConfig
 from db.client import MongoDBClient
 from db.news_queries import get_news_by_ticker_and_date, initialize_news_manager
 from db.aggregates_queries import create_aggregate, initialize_aggregates_manager
+from db.news_queries import get_news_by_ticker_and_date
+from db.aggregates_queries import create_aggregate, update_aggregate_by_ticker_and_date
 
 from logger import get_logger
 
@@ -31,10 +33,12 @@ def calculate_aggregate(search_date, ticker):
 
         logger.info(f"Calculated features: {features}, for date: {date_str}, ticker: {ticker}")
 
-        try:
+        # determine if search_date is today
+        date_obj = search_date.date() if isinstance(search_date, datetime) else search_date
+        if date_obj == datetime.today().date():
+            update_aggregate_by_ticker_and_date(ticker, date_str, features)
+        else:
             create_aggregate(features)
-        except DuplicateKeyError:
-            logger.error(f"Aggregate already exists for {ticker} on {date_str}")
     else:
         logger.info(f"No documents found for {ticker} on {date_str}")
 
