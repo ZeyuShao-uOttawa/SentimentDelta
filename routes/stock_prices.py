@@ -1,13 +1,9 @@
 from flask import request, jsonify, Blueprint
 from db.stock_price_queries import (
-    create_stock_data,
-    create_many_stock_data,
     get_stock_data_by_range,
     get_latest_stock_data,
     get_all_stock_tickers,
-    update_stock_data,
-    delete_stock_data,
-    delete_ticker_data,
+    get_ticker_date_range,
 )
 from utils.logger import get_logger
 from datetime import datetime, timedelta
@@ -60,7 +56,7 @@ def _serialize_doc(doc: dict) -> dict:
 def list_tickers():
     """Return a list of unique tickers available in the collection."""
 
-    tickers = get_all_stock_tickers()
+    tickers = get_ticker_date_range()
     return jsonify({"tickers": tickers}), 200
 
 

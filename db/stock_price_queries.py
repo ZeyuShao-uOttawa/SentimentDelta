@@ -205,6 +205,52 @@ class StockPriceManager:
             logger.error(f"Error getting tickers: {e}")
             return []
 
+    def get_ticker_date_range(self) -> Any:
+        """Get the min and max Datetime.
+
+        If ticker is None or "*" (or "ALL"), returns a list of dicts:
+            [{"Ticker": <ticker>, "start": <minDate>, "end": <maxDate>}, ...]
+        If a specific ticker string is provided, returns a dict:
+            {"start": <minDate>, "end": <maxDate>} or None if no records.
+        """
+        try:
+            pipeline = [
+            {
+                "$group": {
+                "_id": "$Ticker",
+                "minDate": {"$min": "$Datetime"},
+                "maxDate": {"$max": "$Datetime"},
+                }
+            },
+            {
+                "$project": {
+                "_id": 0,
+                "Ticker": "$_id",
+                "start": {
+                    "$dateToString": {
+                    "date": "$minDate",
+                    "format": "%Y-%m-%d",
+                    "timezone": "UTC",
+                    }
+                },
+                "end": {
+                    "$dateToString": {
+                    "date": "$maxDate",
+                    "format": "%Y-%m-%d",
+                    "timezone": "UTC",
+                    }
+                },
+                }
+            },
+            ]
+            agg = list(self.collection.aggregate(pipeline))
+            logger.info(f"Found date ranges for {len(agg)} tickers")
+            return agg
+        
+        except Exception as e:
+            logger.error(f"Error getting date range for ticker")
+            return None
+
 
 # Global singleton instance
 _stock_manager = StockPriceManager()
@@ -245,3 +291,7 @@ def delete_ticker_data(ticker: str) -> int:
 def get_all_stock_tickers() -> List[str]:
     """Get list of all unique tickers."""
     return _stock_manager.get_all_tickers()
+
+def get_ticker_date_range() -> Optional[Dict[str, Any]]:
+    """Get the min and max Datetime for a given ticker."""
+    return _stock_manager.get_ticker_date_range()
