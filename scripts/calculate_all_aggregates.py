@@ -5,9 +5,8 @@ from utils.daily_aggregate import daily_aggregate
 from config.config import ApiConfig
 from db.client import MongoDBClient
 from db.news_queries import get_news_by_ticker_and_date, initialize_news_manager
-from db.aggregates_queries import create_aggregate, initialize_aggregates_manager
 from db.news_queries import get_news_by_ticker_and_date
-from db.aggregates_queries import create_aggregate, update_aggregate_by_ticker_and_date
+from db.aggregates_queries import create_aggregate, update_aggregate_by_ticker_and_date, initialize_aggregates_manager
 
 from logger import get_logger
 
