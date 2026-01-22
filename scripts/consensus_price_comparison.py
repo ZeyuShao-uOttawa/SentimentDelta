@@ -11,11 +11,11 @@ This script:
 import pandas as pd
 import numpy as np
 
-from scipy.stats import pearsonr, spearmanr
 from pymongo import MongoClient
-from datetime import datetime, timedelta
+from scipy.stats import pearsonr, spearmanr
+from statsmodels.tsa.stattools import grangercausalitytests
 
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
 
@@ -95,6 +95,21 @@ def align_sentiment_price(sent_df: pd.DataFrame, price_daily: pd.DataFrame) -> p
     merged = merged.dropna(subset=["next_return", "next_range"])
     return merged
 
+def add_lagged_returns(df: pd.DataFrame, lags: int = 3) -> pd.DataFrame:
+    """
+    Adds past returns as features.
+
+    WHY:
+    Prices are autocorrelated.
+    If sentiment matters, it must add information
+    BEYOND past price movements.
+    """
+    df = df.sort_values("date")
+    for lag in range(1, lags + 1):
+        df[f"ret_lag_{lag}"] = df["return"].shift(lag)
+    return df
+
+
 # Correlation between features and next day returns (If correlation is ~0 regression will be weak)
 def correlation_report(df: pd.DataFrame):
     print("\n=== Correlation with next-day return ===")
@@ -135,6 +150,38 @@ def train_regression(df: pd.DataFrame):
 
     return model
 
+def train_logistic(df):
+    """
+    Logistic Regression:
+    Predicts probability of UP vs DOWN tomorrow.
+
+    Output:
+    P(next_return > 0 | today's sentiment)
+    """
+    features = [
+        "sent_mean", "sent_std", "attention", "bull_bear_ratio",
+        "ret_lag_1", "ret_lag_2", "ret_lag_3"
+    ]
+
+    X = df[features]
+    y = (df["next_return"] > 0).astype(int)
+
+    split = int(len(df) * 0.7)
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+    probs = model.predict_proba(X_test)[:, 1]
+
+    print("\n=== Logistic Regression ===")
+    print("Accuracy:", round(accuracy_score(y_test, preds), 4))
+    print("ROC AUC:", round(roc_auc_score(y_test, probs), 4))
+
+    return model
+
 # Classification model (direction prediction)
 def train_classifier(df: pd.DataFrame):
     features = [
@@ -169,6 +216,31 @@ def train_classifier(df: pd.DataFrame):
     print("ROC AUC:", round(roc_auc_score(y_test, probs), 4))
 
     return clf
+
+def run_granger(df, max_lag=3):
+    """
+    Granger causality test:
+
+    H0:
+    Sentiment does NOT improve prediction of returns
+    beyond past returns alone.
+
+    If p < 0.05 → sentiment Granger-causes returns
+    """
+    print("\n=== Granger Causality Tests ===")
+
+    test_df = df[["next_return", "sent_mean"]].dropna()
+    test_df.columns = ["return", "sent"]
+
+    results = grangercausalitytests(
+        test_df,
+        maxlag=max_lag,
+        verbose=False
+    )
+
+    for lag, res in results.items():
+        pval = res[0]["ssr_ftest"][1]
+        print(f"Lag {lag}: p-value = {pval:.4f}")
 
 def volatility_correlation_report(df: pd.DataFrame):
     print("\n=== Correlation with next-day range ===")
@@ -209,15 +281,20 @@ def run_pipeline(ticker: str):
     sent_df = load_sentiment_aggregates(ticker)
     hourly_prices = load_hourly_prices(ticker)
 
-    daily_price = hourly_to_daily_targets(hourly_prices)
-    merged = align_sentiment_price(sent_df, daily_price)
+    daily_prices = hourly_to_daily_targets(hourly_prices)
+    daily_prices = add_lagged_returns(daily_prices)
+
+    merged = align_sentiment_price(sent_df, daily_prices)
 
     print(f"\nTicker: {ticker}")
     print("Records after alignment:", len(merged))
 
     correlation_report(merged)
     train_regression(merged)
+    train_logistic(merged)
     train_classifier(merged)
+    run_granger(merged)
+    volatility_correlation_report(merged)
     train_volatility_model(merged)
 
 if __name__ == "__main__":

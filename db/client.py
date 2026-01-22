@@ -31,7 +31,9 @@ class MongoDBClient:
 
         self.db.news.create_index([("ticker", ASCENDING), ("date", ASCENDING)])
         
-        self.db.stock_prices.create_index([("Ticker", ASCENDING), ("Datetime", ASCENDING)], unique=True,)
+        self.db.aggregates.create_index([("ticker", ASCENDING), ("date", ASCENDING)], unique=True)
+
+        self.db.stock_prices.create_index([("Ticker", ASCENDING), ("Datetime", ASCENDING)], unique=True)
     
     def close(self) -> None:
         """Close MongoDB connection."""
