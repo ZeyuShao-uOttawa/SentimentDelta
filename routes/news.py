@@ -1,3 +1,10 @@
+"""Routes for ingesting news and social posts.
+
+Exposes a POST `/news` endpoint that accepts news articles or reddit posts
+for a given company and persists them (with embeddings and sentiment)
+into the `news` collection.
+"""
+
 from flask import request, jsonify, Blueprint, current_app
 from sentence_transformers import SentenceTransformer
 from pymongo import errors
@@ -17,6 +24,12 @@ COLLECTION_NAME = "news"
 
 # Standardizes stock ticker format
 def sanitize_ticker_name(name: str) -> str:
+    """Normalize and validate a ticker string.
+
+    Replaces any character that is not a letter, number or underscore
+    with underscore and converts to upper-case. Raises ValueError for
+    empty/invalid input.
+    """
     # Replaces all character that is not a letter, number or underscore with _
     clean = re.sub(r"[^A-Za-z0-9_]", "_", name.upper())
     if not clean:
@@ -25,6 +38,15 @@ def sanitize_ticker_name(name: str) -> str:
 
 @news_bp.route("/news", methods=["POST"])
 def save_news():
+    """Accept and persist news articles or reddit posts.
+
+    Expected JSON payload shape:
+    - `company`: ticker or company name
+    - `articles` or `posts`: list of objects with `title`, `url`, `date`, `body`
+
+    Returns a JSON summary with number of inserted and skipped documents.
+    """
+
     data = request.get_json(force=True)
 
     if not data or "company" not in data or ("articles" not in data and "posts" not in data):
