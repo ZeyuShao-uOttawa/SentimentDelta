@@ -1,0 +1,35 @@
+erDiagram
+
+    NEWS {
+        ObjectId _id
+        string ticker
+        string source
+        string title
+        string url
+        string date
+        string body
+        float[] embedding
+        datetime ingested_at
+        object sentiment
+    }
+
+    AGGREGATES {
+        ObjectId _id
+        string ticker
+        string date
+        float sent_mean
+        float sent_std
+        int attention
+        float bull_bear_ratio
+    }
+
+    STOCK_PRICES {
+        string _id
+        string Ticker
+        datetime Datetime
+        float Open
+        float High
+        float Low
+        float Close
+        int Volume
+    }
