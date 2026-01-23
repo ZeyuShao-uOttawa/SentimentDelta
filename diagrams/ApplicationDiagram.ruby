@@ -1,35 +1,45 @@
+---
+config:
+  flowchart:
+    curve: linear
+  layout: dagre
+---
 flowchart TB
-    Start(["App Start"]) --> InitSubgraph
-    subgraph InitSubgraph["Initialization"]
+ subgraph InitSubgraph["Initialization"]
         Init["App Initialization"]
         Config["Load Config"]
-        DB["Connect to MongoDB"]:::db
+        DB["Connect to MongoDB"]
         Embeddings["Setup Embeddings"]
-        Managers["Initialize Managers"]
+        Managers["Initialize DB Managers"]
         Scheduler["Start Scheduler"]
-    end
-    InitSubgraph --> SchedulerSubgraph
-
-    subgraph SchedulerSubgraph["Scheduler Jobs"]
-        StockJob["Stock Price Job"]:::job
-        YahooJob["Yahoo News Job"]:::job
-        FinvizJob["Finviz News Job"]:::job
-        AggJob["Aggregate Job"]:::job
-    end
-
+  end
+ subgraph SchedulerSubgraph["Scheduler Jobs"]
+        StockJob["Stock Price Job"]
+        YahooJob["Yahoo News Job"]
+        FinvizJob["Finviz News Job"]
+        AggJob["Aggregate Job"]
+  end
+    Start(["App Start"]) --> InitSubgraph
     StockJob --> StockFetch["Fetch Stock Prices"]
-    StockFetch --> StockStore["Store Stock Prices"]:::store
-
+    StockFetch --> StockStore["Store Stock Prices"]
     YahooJob --> NewsFetch["Fetch News Articles"]
     FinvizJob --> NewsFetch
     NewsFetch --> NewsProcess["Process Articles<br>(Sentiment + Embeddings)"]
-    NewsProcess --> NewsStore["Store News"]:::store
-
+    NewsProcess --> NewsStore["Store News"]
     AggJob --> AggCalc["Calculate Aggregates"]
-    AggCalc --> AggStore["Store Aggregates"]:::store
+    AggCalc --> AggStore["Store Aggregates"]
+    Maintenance["Migration / Update Scripts"] --> NewsStore
+    Scheduler --> SchedulerSubgraph
 
-    Maintenance["Migration / Update Scripts"]:::maintenance --> NewsStore
-
+     DB:::db
+     StockJob:::job
+     YahooJob:::job
+     FinvizJob:::job
+     AggJob:::job
+     StockStore:::store
+     NewsStore:::store
+     AggStore:::store
+     Maintenance:::maintenance
     classDef init fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px
     classDef job fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
     classDef fetch fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px

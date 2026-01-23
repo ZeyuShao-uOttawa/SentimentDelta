@@ -52,7 +52,7 @@ class _AggregatesManager:
 		return self.collection.find_one({"_id": ObjectId(doc_id)})
 
 	def find_all(self, limit: int = 100) -> List[Dict[str, Any]]:
-		return list(self.collection.find().limit(limit))
+		return list(self.collection.find().sort("date", -1).limit(limit))
 
 	def find_by_ticker(self, ticker: str) -> List[Dict[str, Any]]:
 		return list(self.collection.find({"ticker": ticker}))
