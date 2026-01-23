@@ -53,9 +53,9 @@ class _NewsManager:
     def find_all(self, limit: int = 100) -> List[Dict[str, Any]]:
         return list(self.collection.find().limit(limit))
 
-    def find_by_ticker(self, ticker: str) -> List[Dict[str, Any]]:
+    def find_by_ticker(self, ticker: str, limit: int = 100) -> List[Dict[str, Any]]:
         return list(
-            self.collection.find({"ticker": ticker})
+            self.collection.find({"ticker": ticker}).limit(limit).sort("date", -1)
         )
 
     def find_by_ticker_and_date(self, ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
@@ -70,6 +70,45 @@ class _NewsManager:
         if projection:
             return list(self.collection.find(query, projection))
         return list(self.collection.find(query))
+
+    def summary_all_tickers(self) -> List[Dict[str, Any]]:
+        """
+        Return a summary for all tickers:
+        [
+            {
+                "ticker": str,
+                "start_date": str,
+                "latest_date": str,
+                "number_of_news": int
+            },
+            ...
+        ]
+        """
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$ticker",
+                    "start_date": {"$min": "$date"},
+                    "latest_date": {"$max": "$date"},
+                    "number_of_news": {"$sum": 1}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "ticker": "$_id",
+                    "start_date": 1,
+                    "latest_date": 1,
+                    "number_of_news": 1
+                }
+            },
+            {
+                "$sort": {"ticker": 1}  # optional, sort alphabetically
+            }
+        ]
+
+        result = list(self.collection.aggregate(pipeline))
+        return result
     
     def get_news_all_dates(self, ticker: Optional[str] = None) -> List[str]:
         """
@@ -188,8 +227,8 @@ def get_news_by_id(doc_id: str) -> Optional[Dict[str, Any]]:
 def get_all_news(limit: int = 100) -> List[Dict[str, Any]]:
     return _news_manager.find_all(limit)
 
-def get_news_by_ticker(ticker: str) -> List[Dict[str, Any]]:
-    return _news_manager.find_by_ticker(ticker)
+def get_news_by_ticker(ticker: str, limit: int = 100) -> List[Dict[str, Any]]:
+    return _news_manager.find_by_ticker(ticker, limit)
 
 def get_news_by_ticker_and_date(ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
     return _news_manager.find_by_ticker_and_date(ticker, date_str, projection)
@@ -226,3 +265,7 @@ def get_news_dates(ticker: Optional[str] = None) -> List[str]:
     Get all unique news dates. Optionally filter by ticker.
     """
     return _news_manager.get_news_all_dates(ticker)
+
+def get_news_summary() -> Dict[str, Any]:
+    """Return summary JSON for a ticker."""
+    return _news_manager.summary_all_tickers()

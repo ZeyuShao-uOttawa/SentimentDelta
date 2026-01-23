@@ -233,7 +233,7 @@ def scrape_yahoo_finance(symbol: str, target_days: int = 1, max_scrolls: int = 1
         news_items = []
         
         for item in tqdm(items, desc="Extracting news", leave=False):
-            if news_item := extract_news_item(item, symbol, target_days, exact_day_only):
+            if news_item := extract_news_item(item, symbol, target_days+1, exact_day_only):
                 news_items.append(news_item)
             time.sleep(0.3)  # Reduced rate limiting
         
