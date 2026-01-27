@@ -97,16 +97,17 @@ def register_jobs(scheduler):
     # -----------------------
     # Initial delayed fetch jobs
     # -----------------------
+    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=30))
     def initial_stock_fetch():
         logger.info("Running delayed initial stock price fetch after server startup")
         fetch_and_store_stock_prices()
 
-    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(seconds=30))
+    @scheduler.task('date', id='initial_finviz_news_fetch', run_date=datetime.now() + timedelta(minutes=4))
     def initial_finviz_news_fetch():
         logger.info("Running delayed initial Finviz news fetch after server startup")
         fetch_and_store_finviz_news()
 
-    @scheduler.task('date', id='initial_yahoo_news_fetch', run_date=datetime.now() + timedelta(minutes=5))
+    @scheduler.task('date', id='initial_yahoo_news_fetch', run_date=datetime.now() + timedelta(minutes=8))
     def initial_yahoo_news_fetch():
         logger.info("Running delayed initial Yahoo news fetch after server startup")
         fetch_and_store_yahoo_news()
