@@ -41,7 +41,7 @@ def sentiment_bull_bear_ratio(docs):
 def daily_aggregate(docs):
 
     sent_mean = sentiment_mean(docs)
-    sent_std = sentiment_mean(docs)
+    sent_std = sentiment_std(docs)
     att = sentiment_attention(docs)
     bull_bear_ratio = sentiment_bull_bear_ratio(docs)
 
