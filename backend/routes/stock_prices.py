@@ -57,7 +57,7 @@ def list_tickers():
     """Return a list of unique tickers available in the collection."""
 
     tickers = get_ticker_date_range()
-    return jsonify({"tickers": tickers}), 200
+    return jsonify(tickers), 200
 
 
 @stock_prices_bp.route("/stock_prices/<ticker>", methods=["GET"])

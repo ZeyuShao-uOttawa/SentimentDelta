@@ -2,7 +2,8 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "./theme-toggle";
+import { useApplicationContext } from "@/context/application-context";
 
 function titleFromPath(pathname: string | null) {
   if (!pathname) return "Dashboard";
@@ -15,11 +16,14 @@ function titleFromPath(pathname: string | null) {
 export default function DashboardHeader() {
   const pathname = usePathname();
   const title = titleFromPath(pathname);
+  const { currentTicker } = useApplicationContext();
 
   return (
     <header className="flex items-center justify-between mb-6">
       <div>
-        <h2 className="text-2xl font-semibold">{title}</h2>
+        <h2 className="text-2xl font-semibold">
+          {title + (currentTicker ? ` - ${currentTicker}` : "")}
+        </h2>
         <p className="text-sm text-muted-foreground">
           Overview and quick stats
         </p>

@@ -92,6 +92,7 @@ def fetch_and_store_stock_prices():
         try:
             logger.info(f"Processing ticker: {ticker}")
             latest_data = get_latest_stock_data(ticker)
+            latest_data = None
             
             if latest_data:
                 latest_datetime = latest_data['Datetime']
@@ -111,8 +112,9 @@ def fetch_and_store_stock_prices():
             else:
                 end_date = datetime.now()
                 start_date = (end_date - timedelta(days=fallback_days)).strftime('%Y-%m-%d')
+                end_date = end_date.strftime('%Y-%m-%d')
                 logger.info(f"No data found for {ticker}. Fetching last {fallback_days} days from {start_date}")
-                ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=None)
+                ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=end_date)
             
             if ticker_data and len(ticker_data) > 0:
                 try:

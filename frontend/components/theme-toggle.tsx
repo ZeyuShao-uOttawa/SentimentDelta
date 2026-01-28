@@ -1,6 +1,6 @@
 "use client";
 import { Icon } from "./icons";
-import { useTheme } from "./theme-provider";
+import { useTheme } from "@/context/theme-provider";
 import { Button } from "./ui/button";
 
 export function ThemeToggle() {

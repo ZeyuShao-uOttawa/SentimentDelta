@@ -41,6 +41,7 @@ export type LineChartCardProps = {
   showTooltip?: boolean;
   margin?: { top?: number; right?: number; left?: number; bottom?: number };
   className?: string;
+  config?: ChartConfig;
 };
 
 export default function LineChartCard({
@@ -59,11 +60,13 @@ export default function LineChartCard({
   showTooltip = true,
   margin = { left: 12, right: 12, top: 6, bottom: 6 },
   className,
+  config,
 }: LineChartCardProps) {
   const color = colors?.[0] ?? colorVar;
-  const config: ChartConfig = {
-    [seriesKey]: { label: seriesKey, color },
-  };
+  const resolvedConfig =
+    config && Object.keys(config).length > 0
+      ? config
+      : { [seriesKey]: { label: seriesKey, color } };
 
   return (
     <Card className={className}>
@@ -72,35 +75,35 @@ export default function LineChartCard({
         {subtitle && <CardDescription>{subtitle}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <ChartContainer config={config}>
+        <ChartContainer config={resolvedConfig}>
           <ResponsiveContainer width={width} height={height}>
             <LineChart data={data} margin={margin}>
-              {showGrid && (
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.06}
-                />
-              )}
+              {showGrid && <CartesianGrid strokeDasharray="3 3" />}
               <XAxis
                 dataKey={nameKey}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
+                // tickLine={false}
+                // axisLine={false}
+                // tickMargin={8}
               />
-              <YAxis tickLine={false} axisLine={false} />
+              <YAxis
+              //   tickLine={false} axisLine={false}
+              />
               {showTooltip && (
                 <ChartTooltip
                   cursor={false}
                   content={<ChartTooltipContent indicator="dot" />}
                 />
               )}
-              <Line
-                dataKey={dataKey}
-                stroke={`var(--color-${seriesKey})`}
-                strokeWidth={strokeWidth}
-                dot={false}
-              />
+              {Object.keys(resolvedConfig).map((key, index) => (
+                <Line
+                  key={index}
+                  dataKey={key}
+                  type="monotone"
+                  stroke={resolvedConfig[key].color}
+                  strokeWidth={strokeWidth}
+                  dot={false}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </ChartContainer>

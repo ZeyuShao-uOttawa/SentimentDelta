@@ -58,6 +58,8 @@ def process_ticker_data(ticker, period="1mo", interval="15m", start=None, end=No
         
         # Add ticker column
         data['Ticker'] = ticker
+
+        # logger.info(f"Logging a sample of processed data for {ticker}:\n{data.head(3)}")
         
         # Create ID field combining ticker and timestamp
         if 'Datetime' in data.columns:
@@ -74,6 +76,8 @@ def process_ticker_data(ticker, period="1mo", interval="15m", start=None, end=No
                 elif isinstance(value, pd.Timestamp):
                     record[key] = value.isoformat()
             json_data.append(record)
+
+        logger.info(f"Example processed record for {ticker}: {json_data[0] if json_data else 'No data'}")
         
         return json_data
         

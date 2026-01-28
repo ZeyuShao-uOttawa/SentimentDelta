@@ -4,7 +4,7 @@ import React, { useMemo, useEffect, useState } from "react";
 import * as RemixIcons from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { BRAND_COLORS, type BrandColorKey } from "@/lib/colors";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/context/theme-provider";
 
 const ICON_SIZE_CLASSES = {
   xs: "text-xs",

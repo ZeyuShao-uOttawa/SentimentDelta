@@ -50,4 +50,4 @@ if __name__ == '__main__':
     app = create_app()
     # Note: app.run() only starts the web server, NOT the cron jobs.
     # The cron jobs are run by the system cron daemon independently.
-    app.run(debug=False, host='0.0.0.0', port=3000)
+    app.run(debug=False, host='0.0.0.0', port=4000)
