@@ -19,13 +19,11 @@ from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-import os
-from dotenv import load_dotenv
+from config.config import ApiConfig
+from scripts.comprehensive_analysis import ComprehensiveAnalyzer
 
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGO_URI_MEET", "mongodb://mongo:27017")
-DB_NAME = "stock_market_db"
+MONGO_URI = ApiConfig.MONGODB_URI
+DB_NAME = ApiConfig.MONGO_DB
 STOCK_PRICES_COLLECTION_NAME = "stock_prices"
 AGGREGATES_COLLECTION_NAME = "aggregates"
 
@@ -58,7 +56,7 @@ def load_hourly_prices(ticker: str) -> pd.DataFrame:
     df["Datetime"] = pd.to_datetime(df["Datetime"])
     return df
 
-# Aggregate hourly prices to daily
+# Aggregate hourly prices to daily, calculates daily return % and range %
 def hourly_to_daily_targets(price_df: pd.DataFrame) -> pd.DataFrame:
     price_df = price_df.copy()
     price_df["date"] = price_df["Datetime"].dt.date
@@ -121,12 +119,18 @@ def correlation_report(df: pd.DataFrame):
         "bull_bear_ratio"
     ]
 
+    corr_results = {}
+
     for col in features:
         pearson = pearsonr(df[col], df["next_return"])[0] # Pearson's measures linear dependance
         spearman = spearmanr(df[col], df["next_return"])[0] # Spearman's measures rank ordering independent of scale
 
         # Negative values indicate inverse correlation (Ex. When sent_mean is high price falls)
         print(f"{col:20s} Pearson={pearson: .4f}  Spearman={spearman: .4f}") # If Spearman > Pearson - Effect is nonlinear
+
+        corr_results[col] = (float(pearson), float(spearman))
+    
+    return corr_results
 
 # Regression model (impact strength) "How much does each sentiment variable move next-day returns, holding the others constant?"
 def train_regression(df: pd.DataFrame):
@@ -143,13 +147,18 @@ def train_regression(df: pd.DataFrame):
     model = Ridge(alpha=1.0)
     model.fit(X, y)
 
+    reg_coef = {}
+
     # A +1 unit increase in [feature] on day T is associated with a [+-coef]% return on day T+1, when all other features are constant
     print("\n=== Price Regression coefficients ===")
     for f, coef in zip(features, model.coef_):
         print(f"{f:20s} {coef: .6f}")
 
-    return model
+        reg_coef[f] = float(coef)
 
+    return reg_coef
+
+# Classification model
 def train_logistic(df):
     """
     Logistic Regression:
@@ -159,8 +168,7 @@ def train_logistic(df):
     P(next_return > 0 | today's sentiment)
     """
     features = [
-        "sent_mean", "sent_std", "attention", "bull_bear_ratio",
-        "ret_lag_1", "ret_lag_2", "ret_lag_3"
+        "sent_mean", "sent_std", "attention", "bull_bear_ratio"
     ]
 
     X = df[features]
@@ -180,7 +188,12 @@ def train_logistic(df):
     print("Accuracy:", round(accuracy_score(y_test, preds), 4))
     print("ROC AUC:", round(roc_auc_score(y_test, probs), 4))
 
-    return model
+    logistic_metrics = {
+        "accuracy": round(accuracy_score(y_test, preds), 4),
+        "auc": round(roc_auc_score(y_test, probs), 4)
+    }
+    
+    return logistic_metrics
 
 # Classification model (direction prediction)
 def train_classifier(df: pd.DataFrame):
@@ -215,7 +228,12 @@ def train_classifier(df: pd.DataFrame):
     print("Accuracy:", round(accuracy_score(y_test, preds), 4))
     print("ROC AUC:", round(roc_auc_score(y_test, probs), 4))
 
-    return clf
+    rf_metrics = {
+        "accuracy": round(accuracy_score(y_test, preds), 4),
+        "auc": round(roc_auc_score(y_test, probs), 4)
+    }
+
+    return rf_metrics
 
 def run_granger(df, max_lag=3):
     """
@@ -238,9 +256,53 @@ def run_granger(df, max_lag=3):
         verbose=False
     )
 
+    granger_results = {}
+
     for lag, res in results.items():
         pval = res[0]["ssr_ftest"][1]
         print(f"Lag {lag}: p-value = {pval:.4f}")
+
+        granger_results[int(lag)] = float(pval)
+
+    return granger_results
+
+def monte_carlo_sentiment_test(
+    df,
+    feature="sent_mean",
+    target="next_return",
+    n_iter=1000
+):
+    """
+    Monte Carlo permutation test.
+    Tests whether sentiment has real predictive power.
+    """
+
+    X_real = df[[feature]].values
+    y = df[target].values
+
+    model = Ridge(alpha=1.0)
+    model.fit(X_real, y)
+    real_coef = model.coef_[0]
+
+    permuted_coefs = []
+
+    for _ in range(n_iter):
+        shuffled = np.random.permutation(X_real[:, 0])
+        X_perm = shuffled.reshape(-1, 1)
+
+        model.fit(X_perm, y)
+        permuted_coefs.append(model.coef_[0])
+
+    permuted_coefs = np.array(permuted_coefs)
+
+    p_value = np.mean(np.abs(permuted_coefs) >= np.abs(real_coef))
+
+    print("\n=== Monte Carlo Test Results ===")
+    print("Real coefficient:", round(real_coef, 6))
+    print("Monte Carlo p-value:", round(p_value, 4))
+
+    return real_coef, permuted_coefs
+
 
 def volatility_correlation_report(df: pd.DataFrame):
     print("\n=== Correlation with next-day range ===")
@@ -289,13 +351,47 @@ def run_pipeline(ticker: str):
     print(f"\nTicker: {ticker}")
     print("Records after alignment:", len(merged))
 
-    correlation_report(merged)
-    train_regression(merged)
-    train_logistic(merged)
-    train_classifier(merged)
-    run_granger(merged)
+    corr_results = correlation_report(merged)
+    regression_coeffs = train_regression(merged)
+    logistic_metrics = train_logistic(merged)
+    rf_metrics = train_classifier(merged)
+    granger_pvals = run_granger(merged)
     volatility_correlation_report(merged)
     train_volatility_model(merged)
+    monte_carlo_results = monte_carlo_sentiment_test(merged)
+
+    # Return all results for comprehensive analysis
+    return {
+        'corr_results': corr_results,
+        'regression_coeffs': regression_coeffs,
+        'logistic_metrics': logistic_metrics,
+        'rf_metrics': rf_metrics,
+        'granger_pvals': granger_pvals,
+        'monte_carlo': monte_carlo_results
+    }
 
 if __name__ == "__main__":
-    run_pipeline("TSLA")
+    # Option 1: Run analysis for a single ticker
+    # results = run_pipeline("TSLA")
+    
+    # Option 2: Run analysis for multiple tickers and generate comprehensive report
+    tickers = ["AAPL"]
+    all_results = {}
+    
+    for ticker in tickers:
+        try:
+            print(f"\n{'='*70}")
+            print(f"Processing {ticker}...")
+            print(f"{'='*70}")
+            all_results[ticker] = run_pipeline(ticker)
+        except Exception as e:
+            print(f"Error processing {ticker}: {e}")
+    
+    # Generate comprehensive analysis across all tickers
+    if all_results:
+        print(f"\n{'='*70}")
+        print("Generating comprehensive analysis...")
+        print(f"{'='*70}")
+        analyzer = ComprehensiveAnalyzer()
+        report_info = analyzer.generate_full_report(all_results)
+        print(f"\nAnalysis complete! Report saved to: {report_info['report_path']}")
