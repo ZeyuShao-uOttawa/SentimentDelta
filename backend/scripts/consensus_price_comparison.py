@@ -32,6 +32,8 @@ db = client[DB_NAME]
 stock_prices_collection = db[STOCK_PRICES_COLLECTION_NAME]
 aggregates_collection = db[AGGREGATES_COLLECTION_NAME]
 
+print("Starting Consensus vs Price Impact Analysis...")
+
 def load_sentiment_aggregates(ticker: str) -> pd.DataFrame:
     docs = list(
         aggregates_collection.find(
@@ -339,11 +341,7 @@ def train_volatility_model(df: pd.DataFrame):
 
     return model
 
-def run_pipeline(ticker: str):
-    sent_df = load_sentiment_aggregates(ticker)
-    hourly_prices = load_hourly_prices(ticker)
-
-    daily_prices = hourly_to_daily_targets(hourly_prices)
+def run_pipeline(ticker: str, sent_df: pd.DataFrame | None = None, daily_prices: pd.DataFrame | None = None):
     daily_prices = add_lagged_returns(daily_prices)
 
     merged = align_sentiment_price(sent_df, daily_prices)
@@ -375,7 +373,7 @@ if __name__ == "__main__":
     # results = run_pipeline("TSLA")
     
     # Option 2: Run analysis for multiple tickers and generate comprehensive report
-    tickers = ["AAPL"]
+    tickers = ApiConfig.TICKERS
     all_results = {}
     
     for ticker in tickers:
@@ -383,7 +381,12 @@ if __name__ == "__main__":
             print(f"\n{'='*70}")
             print(f"Processing {ticker}...")
             print(f"{'='*70}")
-            all_results[ticker] = run_pipeline(ticker)
+
+            sent_df = load_sentiment_aggregates(ticker)
+            hourly_prices = load_hourly_prices(ticker)
+            daily_prices = hourly_to_daily_targets(hourly_prices)
+
+            all_results[ticker] = run_pipeline(ticker, sent_df, daily_prices)
         except Exception as e:
             print(f"Error processing {ticker}: {e}")
     

@@ -453,7 +453,7 @@ class ComprehensiveAnalyzer:
     
     def _plot_model_performance(self):
         """Plot classification model performance."""
-        metrics = self.analyze_classification_metrics()
+        metrics = self.classification_cache
         
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
         

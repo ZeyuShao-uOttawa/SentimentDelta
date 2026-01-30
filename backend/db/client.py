@@ -27,7 +27,7 @@ class MongoDBClient:
             return False
 
     def _create_indexes(self) -> None:
-        self.db.news.create_index("url", unique=True)
+        self.db.news.create_index([("url", ASCENDING), ("ticker", ASCENDING)], unique=True)
 
         self.db.news.create_index([("ticker", ASCENDING), ("date", ASCENDING)])
         
