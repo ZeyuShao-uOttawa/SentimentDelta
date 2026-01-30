@@ -9,6 +9,7 @@ class ApiConfig:
     MONGODB_URI = os.getenv("MONGODB_URI")
     MONGO_DB = os.getenv("MONGO_DB")
     MONGODB_URI = os.getenv('MONGODB_URI')
+    FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY')
     DATABASE_NAME = os.getenv('DATABASE_NAME', 'stock_market_db')
     TICKERS = [t.strip().upper() for t in os.getenv('TICKERS', 'AAPL,GOOGL,MSFT,TSLA,AMZN').split(',')]
     BATCH_SIZE = int(os.getenv('BATCH_SIZE', '1000'))
