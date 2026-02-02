@@ -9,7 +9,7 @@ export interface AggregateData {
 }
 
 export interface NewsItem {
-  _id: { $oid: string };
+  _id:string;
   ticker: string;
   source: string;
   title: string;
@@ -33,7 +33,7 @@ export interface StockPrice {
   Low: number;
   Close: number;
   Volume: number;
-  Datetime: { $date: string };
+  Datetime: string; // ISO string without timezone
 }
 
 export interface TickerInfo {

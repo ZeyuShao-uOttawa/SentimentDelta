@@ -112,7 +112,7 @@ def register_jobs(scheduler):
     #     logger.info("Running delayed initial Yahoo news fetch after server startup")
     #     fetch_and_store_yahoo_news()
 
-    @scheduler.task('date', id='initial_aggregate_calculation', run_date=datetime.now() + timedelta(seconds=20))
-    def initial_aggregate_calculation():
-        logger.info("Running delayed initial aggregate calculation after server startup")
-        process_missing_aggregates()
+    # @scheduler.task('date', id='initial_aggregate_calculation', run_date=datetime.now() + timedelta(minutes=20))
+    # def initial_aggregate_calculation():
+    #     logger.info("Running delayed initial aggregate calculation after server startup")
+    #     process_missing_aggregates()

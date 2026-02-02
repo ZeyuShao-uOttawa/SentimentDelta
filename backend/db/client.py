@@ -30,6 +30,8 @@ class MongoDBClient:
         self.db.news.create_index([("url", ASCENDING), ("ticker", ASCENDING)], unique=True)
 
         self.db.news.create_index([("ticker", ASCENDING), ("date", ASCENDING)])
+
+        self.db.news.create_index([("title", "text"), ("body", "text")], name="news_text_filter")
         
         self.db.aggregates.create_index([("ticker", ASCENDING), ("date", ASCENDING)], unique=True)
 

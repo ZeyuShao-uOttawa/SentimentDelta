@@ -35,13 +35,17 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  filterKey?: string; // The column to filter by (e.g., "email" or "name")
+  filterValue?: string; // New: controlled value from parent
+  onFilterChange?: (value: string) => void; // New: callback for parent
+  hidePagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  filterKey,
+  filterValue,
+  onFilterChange,
+  hidePagination = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -67,25 +71,31 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      // If we are controlling filtering from parent, we sync it here
+      // globalFilter: filterValue,
     },
+    // Allows global filtering if filterValue is passed
+    onGlobalFilterChange: onFilterChange,
   });
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         {/* Dynamic Filter Input */}
-        {filterKey && (
+        {
           <Input
-            placeholder={`Filter ${filterKey}...`}
-            value={
-              (table.getColumn(filterKey)?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn(filterKey)?.setFilterValue(event.target.value)
-            }
+            placeholder={`Search ...`}
+            value={filterValue ?? ""}
+            onChange={(event) => {
+              const val = event.target.value;
+              // If parent provided a handler, use it. Otherwise, use internal column filter.
+              if (onFilterChange) {
+                onFilterChange(val);
+              }
+            }}
             className="max-w-sm"
           />
-        )}
+        }
 
         {/* Column Visibility Toggle */}
         <DropdownMenu>
@@ -161,31 +171,33 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+      {/* Conditionally hide the internal pagination */}
+      {!hidePagination && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="text-muted-foreground flex-1 text-sm">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

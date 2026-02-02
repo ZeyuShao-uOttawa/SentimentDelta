@@ -41,6 +41,7 @@ export type AreaChartCardProps = {
   showTooltip?: boolean;
   margin?: { top?: number; right?: number; left?: number; bottom?: number };
   className?: string;
+  config?: ChartConfig; // config object for multiple series
 };
 
 export default function AreaChartCard({
@@ -57,13 +58,15 @@ export default function AreaChartCard({
   strokeWidth = 2,
   showGrid = true,
   showTooltip = true,
-  margin = { left: 12, right: 12, top: 6, bottom: 6 },
+  margin = { left: 0, right: 0, top: 6, bottom: 0 },
   className,
+  config,
 }: AreaChartCardProps) {
   const color = colors?.[0] ?? colorVar;
-  const config: ChartConfig = {
-    [seriesKey]: { label: seriesKey, color },
-  };
+  const resolvedConfig =
+    config && Object.keys(config).length > 0
+      ? config
+      : { [seriesKey]: { label: seriesKey, color } };
 
   return (
     <Card className={className}>
@@ -71,8 +74,8 @@ export default function AreaChartCard({
         {title && <CardTitle>{title}</CardTitle>}
         {subtitle && <CardDescription>{subtitle}</CardDescription>}
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={config}>
+      <CardContent className="pl-0 pr-6">
+        <ChartContainer config={resolvedConfig}>
           <ResponsiveContainer width={width} height={height}>
             <AreaChart data={data} margin={margin}>
               {showGrid && (
@@ -95,14 +98,17 @@ export default function AreaChartCard({
                   content={<ChartTooltipContent indicator="line" />}
                 />
               )}
-              <Area
-                dataKey={dataKey}
-                type="natural"
-                stroke={`var(--color-${seriesKey})`}
-                fill={`var(--color-${seriesKey})`}
-                fillOpacity={0.12}
-                strokeWidth={strokeWidth}
-              />
+              {Object.keys(resolvedConfig).map((key, index) => (
+                <Area
+                  key={index}
+                  dataKey={key}
+                  type="natural"
+                  stroke={resolvedConfig[key].color}
+                  fill={resolvedConfig[key].color}
+                  fillOpacity={0.12}
+                  strokeWidth={strokeWidth}
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
