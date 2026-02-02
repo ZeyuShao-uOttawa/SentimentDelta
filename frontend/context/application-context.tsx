@@ -3,7 +3,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { SentimentDeltaAPI } from "@/api/apiService";
 import { AggregateData, NewsItem, StockPrice, TickerInfo } from "@/api/types";
-import { aggregateResponse } from "@/api/resposne";
+import {
+  aggregateResponse,
+  NewsApiResponse,
+  PriceRangeResponse,
+  PriceRangeWithMeta,
+} from "@/api/resposne";
 
 type ApplicationContextType = {
   tickers: TickerInfo[];
@@ -14,8 +19,17 @@ type ApplicationContextType = {
   setCurrentTicker: React.Dispatch<React.SetStateAction<string | null>>;
   fetchTickers: () => Promise<void>;
   fetchLatestPrices: (ticker: string) => Promise<void>;
-  fetchNewsByTicker: (ticker: string) => Promise<void>;
   fetchAggregatesByTicker: () => Promise<aggregateResponse | undefined>;
+  fetchNewsByTickerAndPagination: (
+    page: number,
+    limit: number,
+    search: string,
+  ) => Promise<NewsApiResponse | undefined>;
+  fetchStockPriceWithDateRange: (
+    ticker: string,
+    start: string,
+    end: string,
+  ) => Promise<PriceRangeWithMeta | undefined>;
 };
 
 const ApplicationContext = createContext<ApplicationContextType | undefined>(
@@ -57,11 +71,42 @@ export const ApplicationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const fetchNewsByTicker = async (ticker: string, limit?: number) => {
+  const fetchStockPriceWithDateRange = async (
+    ticker: string,
+    start: string,
+    end: string,
+  ) => {
     try {
-      if (news[ticker] === undefined) {
-        const data = await SentimentDeltaAPI.getNewsByTicker(ticker, limit);
-        setNews((prevNews) => ({ ...prevNews, [ticker]: data }));
+      const data = await SentimentDeltaAPI.getPriceRange(ticker, start, end);
+
+      const tickerMeta = tickers.find((t) => t.Ticker === ticker);
+
+      const enrichedData: PriceRangeWithMeta = {
+        ...data,
+        start: tickerMeta?.start ?? start,
+        end: tickerMeta?.end ?? end,
+      };
+
+      return enrichedData;
+    } catch (error) {
+      console.error("Failed to fetch stock prices with date range", error);
+    }
+  };
+
+  const fetchNewsByTickerAndPagination = async (
+    page: number,
+    limit: number,
+    search: string,
+  ) => {
+    try {
+      if (currentTicker) {
+        const data = await SentimentDeltaAPI.getNewsByTickerAndPagination(
+          currentTicker,
+          page,
+          limit,
+          search,
+        );
+        return data;
       }
     } catch (error) {
       console.error("Failed to fetch news", error);
@@ -99,7 +144,8 @@ export const ApplicationProvider: React.FC<{ children: React.ReactNode }> = ({
         aggregates,
         fetchTickers,
         fetchLatestPrices,
-        fetchNewsByTicker,
+        fetchNewsByTickerAndPagination,
+        fetchStockPriceWithDateRange,
         fetchAggregatesByTicker,
         currentTicker,
         setCurrentTicker,

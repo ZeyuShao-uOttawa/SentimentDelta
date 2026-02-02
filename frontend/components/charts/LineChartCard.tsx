@@ -42,6 +42,7 @@ export type LineChartCardProps = {
   margin?: { top?: number; right?: number; left?: number; bottom?: number };
   className?: string;
   config?: ChartConfig;
+  tooltipKey?: string;
 };
 
 export default function LineChartCard({
@@ -58,9 +59,10 @@ export default function LineChartCard({
   strokeWidth = 2,
   showGrid = true,
   showTooltip = true,
-  margin = { left: 12, right: 12, top: 6, bottom: 6 },
+  margin = { left: 0, right: 0, top: 6, bottom: 0 },
   className,
   config,
+  tooltipKey,
 }: LineChartCardProps) {
   const color = colors?.[0] ?? colorVar;
   const resolvedConfig =
@@ -74,7 +76,7 @@ export default function LineChartCard({
         {title && <CardTitle>{title}</CardTitle>}
         {subtitle && <CardDescription>{subtitle}</CardDescription>}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pl-0 pr-6">
         <ChartContainer config={resolvedConfig}>
           <ResponsiveContainer width={width} height={height}>
             <LineChart data={data} margin={margin}>
@@ -90,8 +92,13 @@ export default function LineChartCard({
               />
               {showTooltip && (
                 <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
+                  cursor={{ stroke: "var(--chart-2)", strokeWidth: 1 }}
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      labelKey={tooltipKey}
+                    />
+                  }
                 />
               )}
               {Object.keys(resolvedConfig).map((key, index) => (

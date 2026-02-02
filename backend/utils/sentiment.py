@@ -2,6 +2,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import torch.nn.functional as F
 
+# TODO: Using LLM for sentiments, If WE can spare time on it [local LLM] [Qwen 3 8B]
+
 # Maximum number of tokens per BERT chunk (BERT models have a 512-token limit)
 MAX_TOKENS = 512
 

@@ -1,6 +1,6 @@
 import axiosInstance from '@/api'; // Your existing axios file
 import { AggregateData, NewsItem, StockPrice, TickerInfo } from '@/api/types';
-import { aggregateResponse } from './resposne';
+import { aggregateResponse, NewsApiResponse, PriceRangeResponse } from './resposne';
 
 export const SentimentDeltaAPI = {
   // --- Health ---
@@ -11,7 +11,7 @@ export const SentimentDeltaAPI = {
 
   getLatestPrice: (ticker: string) => axiosInstance.get<StockPrice>(`/stock_prices/${ticker}/latest`).then(res => res.data),
 
-  getPriceRange: (ticker: string, start: string, end: string) => axiosInstance.get<StockPrice[]>(`/stock_prices/${ticker}`, { params: { start, end } }).then(res => res.data),
+  getPriceRange: (ticker: string, start: string, end: string) => axiosInstance.get<PriceRangeResponse>(`/stock_prices/${ticker}`, { params: { start, end } }).then(res => res.data),
 
   // --- News ---
   getNewsList: (limit = 100) => axiosInstance.get<NewsItem[]>('/news/list', { params: { limit } }).then(res => res.data),
@@ -19,6 +19,8 @@ export const SentimentDeltaAPI = {
   getNewsSummary: () => axiosInstance.get('/news/summary').then(res => res.data),
 
   getNewsByTicker: (ticker: string, limit = 10) => axiosInstance.get<NewsItem[]>(`/news/ticker/${ticker}/list`, { params: { limit } }).then(res => res.data),
+
+  getNewsByTickerAndPagination : (ticker: string, page: number, limit: number, search: string) => axiosInstance.get<NewsApiResponse>(`/news/ticker/${ticker}/paginated`, { params: { page, limit, search } }).then(res => res.data),
 
   getNewsByTickerAndDate: (ticker: string, date: string) => axiosInstance.get(`/news/ticker/${ticker}/date/${date}`).then(res => res.data),
 

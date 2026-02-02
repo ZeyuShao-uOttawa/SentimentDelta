@@ -89,7 +89,7 @@ export default function Sidebar() {
               }`}
             >
               <Icon iconName={item.icon} iconSize="sm" className="shrink-0" />
-              <span>{item.label} </span>
+              <span>{item.label}</span>
             </Link>
           );
         })}

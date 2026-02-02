@@ -12,6 +12,7 @@ from db.news_queries import (
     create_news,
     get_all_news,
     get_news_by_ticker,
+    get_news_by_ticker_paginated,
     get_news_by_ticker_and_date,
     get_news_date_range,
     get_news_summary,
@@ -159,6 +160,41 @@ def list_news_by_ticker(ticker: str):
 
     docs = get_news_by_ticker(ticker.upper(), limit_val)
     return jsonify({"ticker": ticker.upper(), "count": len(docs), "data": [_serialize_doc(d) for d in docs]}), 200
+
+
+@news_bp.route("/news/ticker/<ticker>/paginated", methods=["GET"])
+def list_news_by_ticker_paginated(ticker: str):
+    """Return paginated news for a ticker.
+    
+    Query Parameters:
+        page (int): Page number (default: 1)
+        limit (int): Number of items per page (default: 10, max: 100)
+    """
+    try:
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10))
+        search = request.args.get("search", "").strip()
+        if not search:
+            search = None
+        
+        if page < 1:
+            return jsonify({"error": "Page must be >= 1"}), 400
+            
+    except ValueError:
+        return jsonify({"error": "Invalid page or limit parameter"}), 400
+
+    result = get_news_by_ticker_paginated(ticker.upper(), page, limit, search)
+    
+    # Serialize the data
+    serialized_data = [_serialize_doc(d) for d in result["data"]]
+    
+    response = {
+        "ticker": ticker.upper(),
+        "data": serialized_data,
+        "pagination": result["pagination"]
+    }
+    
+    return jsonify(response), 200
 
 
 @news_bp.route("/news/ticker/<ticker>/date/<date_str>", methods=["GET"])

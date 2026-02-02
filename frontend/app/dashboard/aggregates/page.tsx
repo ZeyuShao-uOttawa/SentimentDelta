@@ -4,6 +4,8 @@ import { useApplicationContext } from "@/context/application-context";
 import { aggregateResponse } from "@/api/resposne";
 import { DataTable } from "@/components/ui/data-table";
 import LineChartCard from "@/components/charts/LineChartCard";
+import { Area } from "recharts";
+import AreaChartCard from "@/components/charts/AreaChartCard";
 
 const columns = [
   {
@@ -48,38 +50,9 @@ export default function AggregatesPage() {
   return (
     <div className="p-4">
       {aggregateData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <LineChartCard
-            title="Bull/Bear Ratio Over Time"
-            data={aggregateData.data}
-            dataKey="bull_bear_ratio"
-            nameKey="date"
-            seriesKey="bull_bear_ratio"
-            colors={["#8884d8"]}
-            height={300}
-          />
-
-          <LineChartCard
-            title="Sentiment Mean Over Time"
-            data={aggregateData.data}
-            dataKey="sent_mean"
-            nameKey="date"
-            seriesKey="sent_mean"
-            colors={["#82ca9d"]}
-            height={300}
-          />
-
-          <LineChartCard
-            title="Sentiment Std Dev Over Time"
-            data={aggregateData.data}
-            dataKey="sent_std"
-            nameKey="date"
-            seriesKey="sent_std"
-            colors={["#ffc658"]}
-            height={300}
-          />
-
-          <LineChartCard
+            className="md:col-span-3"
             title="Combined Metrics Over Time"
             data={aggregateData.data}
             nameKey="date"
@@ -93,6 +66,36 @@ export default function AggregatesPage() {
               sent_mean: { label: "Sentiment Mean", color: "#82ca9d" },
               sent_std: { label: "Sentiment Std Dev", color: "#ffc658" },
             }}
+          />
+
+          <AreaChartCard
+            title="Bull/Bear Ratio Over Time"
+            data={aggregateData.data}
+            dataKey="bull_bear_ratio"
+            nameKey="date"
+            seriesKey="bull_bear_ratio"
+            colors={["#8884d8"]}
+            height={300}
+          />
+
+          <AreaChartCard
+            title="Sentiment Mean Over Time"
+            data={aggregateData.data}
+            dataKey="sent_mean"
+            nameKey="date"
+            seriesKey="sent_mean"
+            colors={["#82ca9d"]}
+            height={300}
+          />
+
+          <AreaChartCard
+            title="Sentiment Std Dev Over Time"
+            data={aggregateData.data}
+            dataKey="sent_std"
+            nameKey="date"
+            seriesKey="sent_std"
+            colors={["#ffc658"]}
+            height={300}
           />
         </div>
       )}

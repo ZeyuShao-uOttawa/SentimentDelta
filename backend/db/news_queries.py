@@ -55,8 +55,50 @@ class _NewsManager:
 
     def find_by_ticker(self, ticker: str, limit: int = 100) -> List[Dict[str, Any]]:
         return list(
-            self.collection.find({"ticker": ticker}).limit(limit).sort("date", -1)
+            self.collection.find(
+                {"ticker": ticker},
+                {"embedding": 0}  # Exclude the 'embedding' field
+            )
+            .limit(limit)
+            .sort("date", -1)
         )
+    
+    def find_by_ticker_paginated(self, ticker: str, page: int = 1, page_size: int = 10, search: str = None) -> Dict[str, Any]:
+        """Get paginated news for a ticker with text search on title and body."""
+        skip = (page - 1) * page_size
+        
+        # 1. Build the query
+        query = {"ticker": ticker}
+        if search:
+            # MongoDB will use the text index created on title and body
+            query["$text"] = {"$search": search}
+        
+        # 2. Get the data
+        # If search is present, we might want to sort by relevance (textScore) 
+        # but here we stay consistent with your date sorting.
+        cursor = self.collection.find(
+            query,
+            {"embedding": 0} 
+        ).sort("date", -1).skip(skip).limit(page_size)
+        
+        news_list = list(cursor)
+        
+        # 3. Get total count based on the SAME query
+        # This ensures "total_pages" is accurate for the filtered results
+        total_count = self.collection.count_documents(query)
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+        
+        return {
+            "data": news_list,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1
+            }
+        }
 
     def find_by_ticker_and_date(self, ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
         """
@@ -229,6 +271,9 @@ def get_all_news(limit: int = 100) -> List[Dict[str, Any]]:
 
 def get_news_by_ticker(ticker: str, limit: int = 100) -> List[Dict[str, Any]]:
     return _news_manager.find_by_ticker(ticker, limit)
+
+def get_news_by_ticker_paginated(ticker: str, page: int = 1, page_size: int = 10, search: str = None) -> Dict[str, Any]:
+    return _news_manager.find_by_ticker_paginated(ticker, page, page_size, search)
 
 def get_news_by_ticker_and_date(ticker: str, date_str: str, projection: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
     return _news_manager.find_by_ticker_and_date(ticker, date_str, projection)
