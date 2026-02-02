@@ -9,6 +9,7 @@ import LineChartCard from "@/components/charts/LineChartCard";
 import { Icon } from "@/components/icons";
 import { StockPrice } from "@/api/types";
 import { cn } from "@/lib/utils";
+import CandleChartCard from "@/components/charts/CandleChartCard";
 
 export default function StockPricesPage() {
   const [data, setData] = useState<StockPrice[] | null>(null);
@@ -234,24 +235,39 @@ export default function StockPricesPage() {
 
       {/* Chart Section */}
       {data && data.length > 0 ? (
-        <LineChartCard
-          title={`${currentTicker} Price Movement`}
-          xAxisKey="name"
-          series={[
-            {
-              dataKey: "close",
-              label: "Close",
-              color: "#8884d8",
-            },
-          ]}
-          data={data.map((item) => {
-            return {
-              name: item.date || "",
-              time: item.time || "",
-              tooltipLabel: `${item.date || ""} ${item.time || ""}`,
-              close: item.Close,
-            };
-          })}
+        // <LineChartCard
+        //   title={`${currentTicker} Price Movement`}
+        //   xAxisKey="name"
+        //   series={[
+        //     {
+        //       dataKey: "close",
+        //       label: "Close",
+        //       color: "#8884d8",
+        //     },
+        //   ]}
+        //   data={data.map((item) => {
+        //     return {
+        //       name: item.date || "",
+        //       time: item.time || "",
+        //       tooltipLabel: `${item.date || ""} ${item.time || ""}`,
+        //       close: item.Close,
+        //     };
+        //   })}
+        // />
+        <CandleChartCard
+          title={`Stock Price - Ticker : ${currentTicker}`}
+          description="Candlestick representation of stock prices"
+          data={data.map((item) => ({
+            date: item.date,
+            time: item.time,
+            open: item.Open,
+            high: item.High,
+            low: item.Low,
+            close: item.Close,
+          }))}
+          xAxisKey="date"
+          bullColor="hsl(142, 76%, 36%)"
+          bearColor="hsl(0, 84%, 60%)"
         />
       ) : (
         !loading && (

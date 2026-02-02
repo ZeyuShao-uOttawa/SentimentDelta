@@ -46,21 +46,6 @@ export default function AggregatesPage() {
     }
   }, [currentTicker]);
 
-  const dataa = [
-    { month: "Jan", revenue: 450, expenses: 420, profit: 30 },
-    { month: "Feb", revenue: 480, expenses: 430, profit: 50 },
-    { month: "Mar", revenue: 510, expenses: 445, profit: 65 },
-    { month: "Apr", revenue: 530, expenses: 460, profit: 70 },
-    { month: "May", revenue: 600, expenses: 500, profit: 100 },
-    { month: "Jun", revenue: 620, expenses: 520, profit: 100 },
-    { month: "Jul", revenue: 700, expenses: 580, profit: 120 },
-    { month: "Aug", revenue: 750, expenses: 600, profit: 150 },
-    { month: "Sep", revenue: 800, expenses: 650, profit: 150 },
-    { month: "Oct", revenue: 850, expenses: 700, profit: 150 },
-    { month: "Nov", revenue: 900, expenses: 750, profit: 150 },
-    { month: "Dec", revenue: 950, expenses: 800, profit: 150 },
-  ];
-
   return (
     <div className="p-4">
       {aggregateData && (
