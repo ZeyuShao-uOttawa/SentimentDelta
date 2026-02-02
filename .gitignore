@@ -61,6 +61,7 @@ build/
 # Misc
 pip-log.txt
 celerybeat-schedule
+analysis_results/
 
 # Frontend (Next.js / Node) artifacts
 frontend/node_modules/

@@ -37,14 +37,18 @@ def calculate_aggregate(search_date, ticker):
         if date_obj == datetime.today().date():
             update_aggregate_by_ticker_and_date(ticker, date_str, features)
         else:
-            create_aggregate(features)
+            try:
+                create_aggregate(features)
+            except DuplicateKeyError:
+                logger.error(f"Duplicate aggregate for {ticker} on {date_str}")
+            
     else:
         logger.info(f"No documents found for {ticker} on {date_str}")
 
 if __name__ == "__main__":
-    TICKERS = ["AAPL", "AMZN", "GOOGL", "META", "MSFT", "NFLX", "NVDA", "TSLA"]
-    start_str = "2026-01-01"
-    end_str = "2026-01-22"
+    TICKERS = ApiConfig.TICKERS
+    start_str = "2025-06-01"
+    end_str = "2026-01-30"
 
     start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
     end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
