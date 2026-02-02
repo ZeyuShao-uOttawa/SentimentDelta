@@ -36,16 +36,16 @@ export default function StockPricesPage() {
       if (response && response.data && response.data.length > 0) {
         const sortedData = [...response.data].sort(
           (a, b) =>
-            new Date(`${a.Datetime}Z`).getTime() -
-            new Date(`${b.Datetime}Z`).getTime(),
+            new Date(`${a.date}T${a.time}Z`).getTime() -
+            new Date(`${b.date}T${b.time}Z`).getTime(),
         );
         setData(sortedData);
 
         // Requirement 3: Auto-update calendar inputs based on response
-        const oldest = sortedData[0].Datetime.split("T")[0];
-        const latest = sortedData[sortedData.length - 1].Datetime.split("T")[0];
-        setStartDate(oldest);
-        setEndDate(latest);
+        const oldest = sortedData[0].date;
+        const latest = sortedData[sortedData.length - 1].date;
+        setStartDate(oldest!);
+        setEndDate(latest!);
       } else {
         setData([]);
       }
@@ -69,7 +69,8 @@ export default function StockPricesPage() {
 
     return {
       latestClose: latest.Close,
-      latestDateStr: latest.Datetime,
+      latestDate: latest.date,
+      latestTime: latest.time,
       priceChange,
       percentageChange: ((priceChange / first.Close) * 100).toFixed(2),
       highestHigh: Math.max(...data.map((item) => item.High)),
@@ -103,15 +104,7 @@ export default function StockPricesPage() {
                       ${metrics.latestClose.toFixed(2)}
                     </p>
                     <p className="text-[10px] font-bold uppercase tracking-tight">
-                      Updated{" "}
-                      {new Date(`${metrics.latestDateStr}Z`).toLocaleTimeString(
-                        [],
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        },
-                      )}
+                      Updated {metrics.latestTime}
                     </p>
                   </div>
                 </div>
@@ -243,23 +236,20 @@ export default function StockPricesPage() {
       {data && data.length > 0 ? (
         <LineChartCard
           title={`${currentTicker} Price Movement`}
-          seriesKey="value"
-          nameKey="name" // Used for X-Axis
-          tooltipKey="time" // Used for Hover Label
+          xAxisKey="name"
+          series={[
+            {
+              dataKey: "close",
+              label: "Close",
+              color: "#8884d8",
+            },
+          ]}
           data={data.map((item) => {
-            const dateObj = new Date(`${item.Datetime}Z`);
             return {
-              name: dateObj.toLocaleDateString([], {
-                month: "short",
-                day: "numeric",
-              }),
-              // This creates the field the tooltip will look for
-              time: dateObj.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              }),
-              value: item.Close,
+              name: item.date || "",
+              time: item.time || "",
+              tooltipLabel: `${item.date || ""} ${item.time || ""}`,
+              close: item.Close,
             };
           })}
         />

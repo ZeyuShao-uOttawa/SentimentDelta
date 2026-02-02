@@ -1,121 +1,164 @@
-"use client";
-
-import React from "react";
-import {
-  Line,
-  LineChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import {
+  ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
 
-export type LineChartCardProps = {
-  title?: React.ReactNode;
-  subtitle?: React.ReactNode;
-  data: Array<Record<string, any>>;
-  dataKey?: string;
-  nameKey?: string;
-  seriesKey: string;
-  colorVar?: string;
-  colors?: string[];
-  height?: number | string;
-  width?: number | string;
-  strokeWidth?: number;
+interface LineSeriesConfig {
+  dataKey: string;
+  color: string;
+  label?: string;
+}
+
+interface LineChartCardProps {
+  title?: string;
+  description?: string;
+  data: Record<string, any>[];
+  xAxisKey: string;
+  series: LineSeriesConfig[];
+  height?: number;
   showGrid?: boolean;
-  showTooltip?: boolean;
-  margin?: { top?: number; right?: number; left?: number; bottom?: number };
+  showYAxis?: boolean;
+  yAxisPadding?: number;
   className?: string;
-  config?: ChartConfig;
-  tooltipKey?: string;
-};
+}
 
 export default function LineChartCard({
   title,
-  subtitle,
+  description,
   data,
-  dataKey = "value",
-  nameKey = "name",
-  seriesKey,
-  colorVar = "var(--chart-2)",
-  colors,
-  height = 200,
-  width = "100%",
-  strokeWidth = 2,
+  xAxisKey,
+  series,
+  height = 300,
   showGrid = true,
-  showTooltip = true,
-  margin = { left: 0, right: 0, top: 6, bottom: 0 },
+  showYAxis = true,
+  yAxisPadding = 0.1,
   className,
-  config,
-  tooltipKey,
 }: LineChartCardProps) {
-  const color = colors?.[0] ?? colorVar;
-  const resolvedConfig =
-    config && Object.keys(config).length > 0
-      ? config
-      : { [seriesKey]: { label: seriesKey, color } };
+  const chartConfig: ChartConfig = series.reduce((config, s) => {
+    config[s.dataKey] = {
+      label: s.label || s.dataKey,
+      color: s.color,
+    };
+    return config;
+  }, {} as ChartConfig);
+
+  const yAxisDomain = useMemo(() => {
+    if (!data.length || !series.length) return [0, 100];
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    data.forEach((item) => {
+      series.forEach((s) => {
+        const value = item[s.dataKey];
+        if (typeof value === "number") {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      });
+    });
+
+    if (min === Infinity || max === -Infinity) return [0, 100];
+
+    const range = max - min;
+    const padding = range * yAxisPadding;
+
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
+  }, [data, series, yAxisPadding]);
 
   return (
     <Card className={className}>
-      <CardHeader>
-        {title && <CardTitle>{title}</CardTitle>}
-        {subtitle && <CardDescription>{subtitle}</CardDescription>}
-      </CardHeader>
-      <CardContent className="pl-0 pr-6">
-        <ChartContainer config={resolvedConfig}>
-          <ResponsiveContainer width={width} height={height}>
-            <LineChart data={data} margin={margin}>
-              {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis
-                dataKey={nameKey}
-                // tickLine={false}
-                // axisLine={false}
-                // tickMargin={8}
-              />
+      {(title || description) && (
+        <CardHeader>
+          {title && <CardTitle>{title}</CardTitle>}
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+      )}
+      <CardContent>
+        <ChartContainer
+          config={chartConfig}
+          className="w-full"
+          style={{ height }}
+        >
+          <LineChart
+            data={data}
+            margin={{ left: 0, right: 12, top: 12, bottom: 12 }}
+          >
+            {showGrid && (
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            )}
+            <XAxis
+              dataKey={xAxisKey}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
+            {showYAxis && (
               <YAxis
-              //   tickLine={false} axisLine={false}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                domain={yAxisDomain}
               />
-              {showTooltip && (
-                <ChartTooltip
-                  cursor={{ stroke: "var(--chart-2)", strokeWidth: 1 }}
-                  content={
-                    <ChartTooltipContent
-                      indicator="dot"
-                      labelKey={tooltipKey}
-                    />
-                  }
-                />
-              )}
-              {Object.keys(resolvedConfig).map((key, index) => (
-                <Line
-                  key={index}
-                  dataKey={key}
-                  type="monotone"
-                  stroke={resolvedConfig[key].color}
-                  strokeWidth={strokeWidth}
-                  dot={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+            )}
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+
+                return (
+                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                    <div className="grid gap-2">
+                      <div className="font-medium text-sm">
+                        {payload[0].payload[xAxisKey]}
+                      </div>
+                      {payload.map((entry: any) => {
+                        const config = chartConfig[entry.dataKey];
+                        return (
+                          <div
+                            key={entry.dataKey}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <div
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-muted-foreground">
+                              {config?.label || entry.dataKey}:
+                            </span>
+                            <span className="font-medium">
+                              {entry.value.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            {series.map((s) => (
+              <Line
+                key={s.dataKey}
+                type="monotone"
+                dataKey={s.dataKey}
+                stroke={`var(--color-${s.dataKey})`}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </LineChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter />
     </Card>
   );
 }

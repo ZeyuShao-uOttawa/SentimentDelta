@@ -1,119 +1,168 @@
-"use client";
-
-import React from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import {
+  ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
 
-export type AreaChartCardProps = {
-  title?: React.ReactNode;
-  subtitle?: React.ReactNode;
-  data: Array<Record<string, any>>;
-  dataKey?: string; // value field name
-  nameKey?: string; // x axis field name
-  seriesKey: string; // key used in ChartConfig for color/label
-  colorVar?: string; // css var or color string (e.g. 'var(--chart-1)')
-  colors?: string[];
-  height?: number | string;
-  width?: number | string;
-  strokeWidth?: number;
+interface AreaSeriesConfig {
+  dataKey: string;
+  color: string;
+  label?: string;
+}
+
+interface AreaChartCardProps {
+  title?: string;
+  description?: string;
+  data: Record<string, any>[];
+  xAxisKey: string;
+  series: AreaSeriesConfig[];
+  height?: number;
   showGrid?: boolean;
-  showTooltip?: boolean;
-  margin?: { top?: number; right?: number; left?: number; bottom?: number };
+  showYAxis?: boolean;
+  yAxisPadding?: number;
   className?: string;
-  config?: ChartConfig; // config object for multiple series
-};
+  stacked?: boolean;
+}
 
 export default function AreaChartCard({
   title,
-  subtitle,
+  description,
   data,
-  dataKey = "value",
-  nameKey = "name",
-  seriesKey,
-  colorVar = "var(--chart-1)",
-  colors,
-  height = 200,
-  width = "100%",
-  strokeWidth = 2,
+  xAxisKey,
+  series,
+  height = 300,
   showGrid = true,
-  showTooltip = true,
-  margin = { left: 0, right: 0, top: 6, bottom: 0 },
+  showYAxis = true,
+  yAxisPadding = 0.1,
   className,
-  config,
+  stacked = false,
 }: AreaChartCardProps) {
-  const color = colors?.[0] ?? colorVar;
-  const resolvedConfig =
-    config && Object.keys(config).length > 0
-      ? config
-      : { [seriesKey]: { label: seriesKey, color } };
+  const chartConfig: ChartConfig = series.reduce((config, s) => {
+    config[s.dataKey] = {
+      label: s.label || s.dataKey,
+      color: s.color,
+    };
+    return config;
+  }, {} as ChartConfig);
+
+  const yAxisDomain = useMemo(() => {
+    if (!data.length || !series.length) return [0, 100];
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    data.forEach((item) => {
+      series.forEach((s) => {
+        const value = item[s.dataKey];
+        if (typeof value === "number") {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      });
+    });
+
+    if (min === Infinity || max === -Infinity) return [0, 100];
+
+    const range = max - min;
+    const padding = range * yAxisPadding;
+
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
+  }, [data, series, yAxisPadding]);
 
   return (
     <Card className={className}>
-      <CardHeader>
-        {title && <CardTitle>{title}</CardTitle>}
-        {subtitle && <CardDescription>{subtitle}</CardDescription>}
-      </CardHeader>
-      <CardContent className="pl-0 pr-6">
-        <ChartContainer config={resolvedConfig}>
-          <ResponsiveContainer width={width} height={height}>
-            <AreaChart data={data} margin={margin}>
-              {showGrid && (
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.06}
-                />
-              )}
-              <XAxis
-                dataKey={nameKey}
+      {(title || description) && (
+        <CardHeader>
+          {title && <CardTitle>{title}</CardTitle>}
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+      )}
+      <CardContent>
+        <ChartContainer
+          config={chartConfig}
+          className="w-full"
+          style={{ height }}
+        >
+          <AreaChart
+            data={data}
+            margin={{ left: 0, right: 12, top: 12, bottom: 12 }}
+          >
+            {showGrid && (
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            )}
+            <XAxis
+              dataKey={xAxisKey}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
+            {showYAxis && (
+              <YAxis
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
+                domain={yAxisDomain}
               />
-              <YAxis tickLine={false} axisLine={false} />
-              {showTooltip && (
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
-                />
-              )}
-              {Object.keys(resolvedConfig).map((key, index) => (
-                <Area
-                  key={index}
-                  dataKey={key}
-                  type="natural"
-                  stroke={resolvedConfig[key].color}
-                  fill={resolvedConfig[key].color}
-                  fillOpacity={0.12}
-                  strokeWidth={strokeWidth}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
+            )}
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+
+                return (
+                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                    <div className="grid gap-2">
+                      <div className="font-medium text-sm">
+                        {payload[0].payload[xAxisKey]}
+                      </div>
+                      {payload.map((entry: any) => {
+                        const config = chartConfig[entry.dataKey];
+                        return (
+                          <div
+                            key={entry.dataKey}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <div
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-muted-foreground">
+                              {config?.label || entry.dataKey}:
+                            </span>
+                            <span className="font-medium">
+                              {entry.value.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            {series.map((s) => (
+              <Area
+                key={s.dataKey}
+                type="monotone"
+                dataKey={s.dataKey}
+                stroke={`var(--color-${s.dataKey})`}
+                fill={`var(--color-${s.dataKey})`}
+                fillOpacity={0.2}
+                strokeWidth={2}
+                stackId={stacked ? "stack" : undefined}
+              />
+            ))}
+          </AreaChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter />
     </Card>
   );
 }

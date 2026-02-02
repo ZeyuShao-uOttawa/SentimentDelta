@@ -4,7 +4,6 @@ import { useApplicationContext } from "@/context/application-context";
 import { aggregateResponse } from "@/api/resposne";
 import { DataTable } from "@/components/ui/data-table";
 import LineChartCard from "@/components/charts/LineChartCard";
-import { Area } from "recharts";
 import AreaChartCard from "@/components/charts/AreaChartCard";
 
 const columns = [
@@ -47,66 +46,100 @@ export default function AggregatesPage() {
     }
   }, [currentTicker]);
 
+  const dataa = [
+    { month: "Jan", revenue: 450, expenses: 420, profit: 30 },
+    { month: "Feb", revenue: 480, expenses: 430, profit: 50 },
+    { month: "Mar", revenue: 510, expenses: 445, profit: 65 },
+    { month: "Apr", revenue: 530, expenses: 460, profit: 70 },
+    { month: "May", revenue: 600, expenses: 500, profit: 100 },
+    { month: "Jun", revenue: 620, expenses: 520, profit: 100 },
+    { month: "Jul", revenue: 700, expenses: 580, profit: 120 },
+    { month: "Aug", revenue: 750, expenses: 600, profit: 150 },
+    { month: "Sep", revenue: 800, expenses: 650, profit: 150 },
+    { month: "Oct", revenue: 850, expenses: 700, profit: 150 },
+    { month: "Nov", revenue: 900, expenses: 750, profit: 150 },
+    { month: "Dec", revenue: 950, expenses: 800, profit: 150 },
+  ];
+
   return (
     <div className="p-4">
       {aggregateData && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <LineChartCard
             className="md:col-span-3"
-            title="Combined Metrics Over Time"
+            title="Financial Overview"
+            description="Monthly metrics"
             data={aggregateData.data}
-            nameKey="date"
-            seriesKey="combined_metrics"
-            height={400}
-            colors={["#8884d8", "#82ca9d", "#ffc658"]}
-            showTooltip={true}
-            margin={{ left: 20, right: 20, top: 10, bottom: 10 }}
-            config={{
-              bull_bear_ratio: { label: "Bull/Bear Ratio", color: "#8884d8" },
-              sent_mean: { label: "Sentiment Mean", color: "#82ca9d" },
-              sent_std: { label: "Sentiment Std Dev", color: "#ffc658" },
-            }}
+            xAxisKey="date"
+            series={[
+              {
+                dataKey: "bull_bear_ratio",
+                color: "#8884d8",
+                label: "Bull/Bear Ratio",
+              },
+              {
+                dataKey: "sent_mean",
+                color: "#82ca9d",
+                label: "Sentiment Mean",
+              },
+              {
+                dataKey: "sent_std",
+                color: "#ffc658",
+                label: "Sentiment Std Dev",
+              },
+            ]}
           />
 
           <AreaChartCard
             title="Bull/Bear Ratio Over Time"
+            xAxisKey="date"
+            series={[
+              {
+                dataKey: "bull_bear_ratio",
+                color: "#8884d8",
+                label: "Bull/Bear Ratio",
+              },
+            ]}
             data={aggregateData.data}
-            dataKey="bull_bear_ratio"
-            nameKey="date"
-            seriesKey="bull_bear_ratio"
-            colors={["#8884d8"]}
             height={300}
+            yAxisPadding={0}
           />
 
           <AreaChartCard
             title="Sentiment Mean Over Time"
+            xAxisKey="date"
+            series={[
+              {
+                dataKey: "sent_mean",
+                color: "#82ca9d",
+                label: "Sentiment Mean",
+              },
+            ]}
             data={aggregateData.data}
-            dataKey="sent_mean"
-            nameKey="date"
-            seriesKey="sent_mean"
-            colors={["#82ca9d"]}
             height={300}
+            yAxisPadding={0}
           />
 
           <AreaChartCard
             title="Sentiment Std Dev Over Time"
+            xAxisKey="date"
+            series={[
+              {
+                dataKey: "sent_std",
+                color: "#ffc658",
+                label: "Sentiment Std Dev",
+              },
+            ]}
             data={aggregateData.data}
-            dataKey="sent_std"
-            nameKey="date"
-            seriesKey="sent_std"
-            colors={["#ffc658"]}
             height={300}
+            yAxisPadding={0}
           />
         </div>
       )}
 
       {aggregateData && (
         <div className="mb-8">
-          <DataTable
-            columns={columns}
-            data={aggregateData.data}
-            filterKey="date"
-          />
+          <DataTable columns={columns} data={aggregateData.data} />
         </div>
       )}
     </div>

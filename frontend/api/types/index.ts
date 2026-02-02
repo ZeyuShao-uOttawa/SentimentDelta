@@ -34,6 +34,8 @@ export interface StockPrice {
   Close: number;
   Volume: number;
   Datetime: string; // ISO string without timezone
+  date: string | undefined; // YYYY-MM-DD
+  time: string | undefined; // HH:MM:SS
 }
 
 export interface TickerInfo {

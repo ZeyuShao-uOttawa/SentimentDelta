@@ -81,8 +81,14 @@ export const ApplicationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const tickerMeta = tickers.find((t) => t.Ticker === ticker);
 
+      const processedData = data.data.map((item: any) => {
+        const [date, time] = item.Datetime.split("T");
+        return { ...item, date, time };
+      });
+
       const enrichedData: PriceRangeWithMeta = {
         ...data,
+        data: processedData,
         start: tickerMeta?.start ?? start,
         end: tickerMeta?.end ?? end,
       };

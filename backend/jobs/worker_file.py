@@ -99,13 +99,14 @@ def fetch_and_store_stock_prices():
                 if isinstance(latest_datetime, str):
                     latest_datetime = pd.to_datetime(latest_datetime)
                 
-                start_time = latest_datetime + timedelta(minutes=15)
+                start_time = latest_datetime
                 start_date = start_time.strftime('%Y-%m-%d')
+                end_date = datetime.now().strftime('%Y-%m-%d')
                 
                 logger.info(f"Latest data for {ticker} found at {latest_datetime}. Fetching from {start_date}")
                 
                 if start_time < datetime.now():
-                    ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=None)
+                    ticker_data = process_ticker_data(ticker=ticker, interval=interval, start=start_date, end=end_date)
                 else:
                     logger.info(f"Latest data for {ticker} is up to date")
                     ticker_data = None
