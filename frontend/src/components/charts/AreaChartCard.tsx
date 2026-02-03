@@ -10,29 +10,29 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
+import {
+  calculateYAxisDomain,
+  generateChartConfig,
+  SeriesConfig,
+} from "@/lib/chart-utils";
 
-interface LineSeriesConfig {
-  dataKey: string;
-  color: string;
-  label?: string;
-}
-
-interface LineChartCardProps {
+interface AreaChartCardProps {
   title?: string;
   description?: string;
   data: Record<string, any>[];
   xAxisKey: string;
-  series: LineSeriesConfig[];
+  series: SeriesConfig[];
   height?: number;
   showGrid?: boolean;
   showYAxis?: boolean;
   yAxisPadding?: number;
   className?: string;
+  stacked?: boolean;
 }
 
-export default function LineChartCard({
+export default function AreaChartCard({
   title,
   description,
   data,
@@ -43,38 +43,14 @@ export default function LineChartCard({
   showYAxis = true,
   yAxisPadding = 0.1,
   className,
-}: LineChartCardProps) {
-  const chartConfig: ChartConfig = series.reduce((config, s) => {
-    config[s.dataKey] = {
-      label: s.label || s.dataKey,
-      color: s.color,
-    };
-    return config;
-  }, {} as ChartConfig);
+  stacked = false,
+}: AreaChartCardProps) {
+  const chartConfig = useMemo(() => generateChartConfig(series), [series]);
 
-  const yAxisDomain = useMemo(() => {
-    if (!data.length || !series.length) return [0, 100];
-
-    let min = Infinity;
-    let max = -Infinity;
-
-    data.forEach((item) => {
-      series.forEach((s) => {
-        const value = item[s.dataKey];
-        if (typeof value === "number") {
-          min = Math.min(min, value);
-          max = Math.max(max, value);
-        }
-      });
-    });
-
-    if (min === Infinity || max === -Infinity) return [0, 100];
-
-    const range = max - min;
-    const padding = range * yAxisPadding;
-
-    return [Math.floor(min - padding), Math.ceil(max + padding)];
-  }, [data, series, yAxisPadding]);
+  const yAxisDomain = useMemo(
+    () => calculateYAxisDomain(data, series, yAxisPadding),
+    [data, series, yAxisPadding],
+  );
 
   return (
     <Card className={className}>
@@ -90,7 +66,7 @@ export default function LineChartCard({
           className="w-full"
           style={{ height }}
         >
-          <LineChart
+          <AreaChart
             data={data}
             margin={{ left: 0, right: 12, top: 12, bottom: 12 }}
           >
@@ -147,16 +123,18 @@ export default function LineChartCard({
               }}
             />
             {series.map((s) => (
-              <Line
+              <Area
                 key={s.dataKey}
                 type="monotone"
                 dataKey={s.dataKey}
                 stroke={`var(--color-${s.dataKey})`}
+                fill={`var(--color-${s.dataKey})`}
+                fillOpacity={0.2}
                 strokeWidth={2}
-                dot={false}
+                stackId={stacked ? "stack" : undefined}
               />
             ))}
-          </LineChart>
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>

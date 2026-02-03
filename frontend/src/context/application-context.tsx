@@ -1,14 +1,20 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { SentimentDeltaAPI } from "@/api/apiService";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import * as API from "@/api/apiService";
 import { AggregateData, NewsItem, StockPrice, TickerInfo } from "@/api/types";
 import {
   aggregateResponse,
   NewsApiResponse,
   PriceRangeResponse,
   PriceRangeWithMeta,
-} from "@/api/resposne";
+} from "@/api/responses";
 
 type ApplicationContextType = {
   tickers: TickerInfo[];
@@ -49,97 +55,99 @@ export const ApplicationProvider: React.FC<{ children: React.ReactNode }> = ({
     {},
   );
 
-  const fetchTickers = async () => {
+  const fetchTickers = useCallback(async () => {
     try {
       if (tickers.length > 0) return;
-      const data = await SentimentDeltaAPI.getTickers();
+      const data = await API.getTickers();
       setTickers(data);
     } catch (error) {
       console.error("Failed to fetch tickers", error);
     }
-  };
+  }, [tickers.length]);
 
-  const fetchLatestPrices = async (ticker: string) => {
-    try {
-      const prices: Record<string, StockPrice> = {};
-      if (prices[ticker] === undefined) {
-        prices[ticker] = await SentimentDeltaAPI.getLatestPrice(ticker);
-        setLatestPrices((prevPrices) => ({ ...prevPrices, ...prices }));
+  const fetchLatestPrices = useCallback(
+    async (ticker: string) => {
+      try {
+        if (latestPrices[ticker] === undefined) {
+          const data = await API.getLatestPrice(ticker);
+          setLatestPrices((prevPrices) => ({ ...prevPrices, [ticker]: data }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch latest prices", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch latest prices", error);
-    }
-  };
+    },
+    [latestPrices],
+  );
 
-  const fetchStockPriceWithDateRange = async (
-    ticker: string,
-    start: string,
-    end: string,
-  ) => {
-    try {
-      const data = await SentimentDeltaAPI.getPriceRange(ticker, start, end);
+  const fetchStockPriceWithDateRange = useCallback(
+    async (ticker: string, start: string, end: string) => {
+      try {
+        const data = await API.getPriceRange(ticker, start, end);
 
-      const tickerMeta = tickers.find((t) => t.Ticker === ticker);
+        const tickerMeta = tickers.find((t) => t.Ticker === ticker);
 
-      const processedData = data.data.map((item: any) => {
-        const [date, time] = item.Datetime.split("T");
-        return { ...item, date, time };
-      });
+        const processedData = data.data.map((item: any) => {
+          const [date, time] = item.Datetime.split("T");
+          return { ...item, date, time };
+        });
 
-      const enrichedData: PriceRangeWithMeta = {
-        ...data,
-        data: processedData,
-        start: tickerMeta?.start ?? start,
-        end: tickerMeta?.end ?? end,
-      };
+        const enrichedData: PriceRangeWithMeta = {
+          ...data,
+          data: processedData,
+          start: tickerMeta?.start ?? start,
+          end: tickerMeta?.end ?? end,
+        };
 
-      return enrichedData;
-    } catch (error) {
-      console.error("Failed to fetch stock prices with date range", error);
-    }
-  };
+        return enrichedData;
+      } catch (error) {
+        console.error("Failed to fetch stock prices with date range", error);
+      }
+    },
+    [tickers],
+  );
 
-  const fetchNewsByTickerAndPagination = async (
-    page: number,
-    limit: number,
-    search: string,
-  ) => {
+  const fetchNewsByTickerAndPagination = useCallback(
+    async (page: number, limit: number, search: string) => {
+      try {
+        if (currentTicker) {
+          const data = await API.getNewsByTickerAndPagination(
+            currentTicker,
+            page,
+            limit,
+            search,
+          );
+          return data;
+        }
+      } catch (error) {
+        console.error("Failed to fetch news", error);
+      }
+    },
+    [currentTicker],
+  );
+
+  const fetchAggregatesByTicker = useCallback(async () => {
     try {
       if (currentTicker) {
-        const data = await SentimentDeltaAPI.getNewsByTickerAndPagination(
-          currentTicker,
-          page,
-          limit,
-          search,
-        );
-        return data;
-      }
-    } catch (error) {
-      console.error("Failed to fetch news", error);
-    }
-  };
-
-  const fetchAggregatesByTicker = async () => {
-    try {
-      if (currentTicker) {
-        const data =
-          await SentimentDeltaAPI.getAggregatesByTicker(currentTicker);
+        const data = await API.getAggregatesByTicker(currentTicker);
         return data;
       }
     } catch (error) {
       console.error("Failed to fetch aggregates", error);
     }
-  };
+  }, [currentTicker]);
 
   useEffect(() => {
     const initializeTicker = async () => {
       await fetchTickers();
-      if (tickers.length > 0 && !currentTicker) {
-        setCurrentTicker(tickers[0].Ticker);
-      }
     };
     initializeTicker();
   }, [fetchTickers]);
+
+  useEffect(() => {
+    if (tickers.length > 0 && !currentTicker) {
+      setCurrentTicker(tickers[0].Ticker);
+    }
+  }, [tickers, currentTicker]);
 
   return (
     <ApplicationContext.Provider

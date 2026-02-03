@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useApplicationContext } from "@/context/application-context";
-import { aggregateResponse } from "@/api/resposne";
+import { aggregateResponse } from "@/api/responses";
 import { DataTable } from "@/components/ui/data-table";
 import LineChartCard from "@/components/charts/LineChartCard";
 import AreaChartCard from "@/components/charts/AreaChartCard";
@@ -48,7 +48,22 @@ export default function AggregatesPage() {
 
   return (
     <div className="p-4">
-      {aggregateData && (
+      {!currentTicker && (
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground">
+          <p>Please select a ticker from the sidebar to view aggregate data.</p>
+        </div>
+      )}
+
+      {currentTicker && !aggregateData && (
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">
+            Loading aggregate data for {currentTicker}...
+          </p>
+        </div>
+      )}
+
+      {currentTicker && aggregateData && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <LineChartCard
             className="md:col-span-3"
@@ -121,7 +136,7 @@ export default function AggregatesPage() {
           />
         </div>
       )}
-{/* 
+      {/* 
       {aggregateData && (
         <div className="mb-8">
           <DataTable columns={columns} data={aggregateData.data} />

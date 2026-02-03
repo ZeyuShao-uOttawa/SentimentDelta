@@ -18,7 +18,7 @@ import type { NewsItem } from "@/api/types";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Icon } from "@/components/icons";
-import type { Pagination } from "@/api/resposne";
+import type { Pagination } from "@/api/responses";
 
 export default function NewsPage() {
   const { currentTicker, fetchNewsByTickerAndPagination } =
