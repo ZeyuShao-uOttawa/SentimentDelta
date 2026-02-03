@@ -71,12 +71,11 @@ def get_prices(ticker: str):
     start = request.args.get("start")
     end = request.args.get("end")
 
-    # If no dates are provided, default to the last 3 days
+    # If no dates are provided, default to the last 7 days
     if not start and not end:
         now = datetime.utcnow()
         end = now.isoformat()
-        start = (now - timedelta(days=3)).isoformat()
-
+        start = (now - timedelta(days=7)).isoformat()
     results = get_stock_data_by_range(ticker.upper(), start, end)
     serialized = [_serialize_doc(r) for r in results]
     return jsonify({"ticker": ticker.upper(), "count": len(serialized), "data": serialized}), 200

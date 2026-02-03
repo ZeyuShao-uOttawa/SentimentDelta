@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApplicationContext } from "@/context/application-context";
-import LineChartCard from "@/components/charts/LineChartCard";
 import { Icon } from "@/components/icons";
 import { StockPrice } from "@/api/types";
 import { cn } from "@/lib/utils";
@@ -257,6 +256,7 @@ export default function StockPricesPage() {
         <CandleChartCard
           title={`Stock Price - Ticker : ${currentTicker}`}
           description="Candlestick representation of stock prices"
+          tooltipKey="time"
           data={data.map((item) => ({
             date: item.date,
             time: item.time,

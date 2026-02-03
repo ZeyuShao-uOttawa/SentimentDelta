@@ -33,6 +33,7 @@ interface CandleChartCardProps {
   className?: string;
   bullColor?: string;
   bearColor?: string;
+  tooltipKey?: string;
 }
 
 export default function CandleChartCard({
@@ -40,6 +41,7 @@ export default function CandleChartCard({
   description,
   data,
   xAxisKey,
+  tooltipKey = undefined,
   height = 400,
   showGrid = true,
   showYAxis = true,
@@ -172,7 +174,7 @@ export default function CandleChartCard({
                   <div className="rounded-lg border bg-background p-3 shadow-sm">
                     <div className="grid gap-2">
                       <div className="font-medium text-sm">
-                        {data[xAxisKey]}
+                        {data[tooltipKey || xAxisKey]}
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <span className="text-muted-foreground">Open:</span>

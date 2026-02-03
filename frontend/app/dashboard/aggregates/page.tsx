@@ -121,12 +121,12 @@ export default function AggregatesPage() {
           />
         </div>
       )}
-
+{/* 
       {aggregateData && (
         <div className="mb-8">
           <DataTable columns={columns} data={aggregateData.data} />
         </div>
-      )}
+      )} */}
     </div>
   );
 }
