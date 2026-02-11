@@ -471,7 +471,7 @@ def run_pipeline(ticker: str, sent_df: pd.DataFrame | None = None, daily_prices:
     print("\nSample data:")
     # print(merged)
 
-    # corr_results = correlation_report(merged)
+    corr_results = correlation_report(merged)
     regression_coeffs = train_regression(merged)
     logistic_metrics = train_logistic(merged)
     rf_metrics = train_classifier(merged)
